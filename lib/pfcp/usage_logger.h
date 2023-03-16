@@ -58,10 +58,11 @@ typedef struct
 
 typedef struct
 {
-    /* User should set the two fields,
+    /* Developer should set these fields.
      * origin specifies what is generating
      * the log files. E.g. "SGW-01" */
     bool enabled;
+    uint64_t file_period_sec;
     char origin[ORIGIN_STR_MAX_LEN];
     char sgw_ip[IPV4_STR_MAX_LEN];
 
@@ -70,9 +71,8 @@ typedef struct
      * shouldn't be directly written
      * to */
     char filename[FILENAME_MAX_LEN];
-    time_t file_start_time;
-    time_t file_end_time;
-    uint64_t file_period_sec;
+    time_t _file_start_time;
+    time_t _file_end_time;
 } UsageLoggerState;
 
 bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLoggerData data);

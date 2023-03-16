@@ -1496,7 +1496,6 @@ void sgwc_sxa_handle_session_report_request(
             ogs_pfcp_volume_measurement_t volume;
             UsageLoggerData usageLoggerData = {0};
 
-
             if (0 == use_rep->presence) {
                 /* We have reached the end of the usage_report list */
                 break;
@@ -1539,7 +1538,7 @@ void sgwc_sxa_handle_session_report_request(
             bool log_res = log_usage_data(&ogs_pfcp_self()->usageLoggerState, current_epoch_sec, usageLoggerData);
 
             if (!log_res) {
-                ogs_info("Failed to log to file %s", ogs_pfcp_self()->usageLoggerState.filename);
+                ogs_info("Failed to log usage data to file %s", ogs_pfcp_self()->usageLoggerState.filename);
             }
         }
     } else {

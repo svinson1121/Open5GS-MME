@@ -264,12 +264,9 @@ void sgwu_sess_urr_acc_add(sgwu_sess_t *sess, ogs_pfcp_urr_t *urr, size_t size, 
     urr_acc->total_octets += size;
     urr_acc->total_pkts++;
     if (is_uplink) {
-            ogs_info("Adding the %li bytes to urr_acc->ul_octets field, field is now %li", size, urr_acc->ul_octets);
-
         urr_acc->ul_octets += size;
         urr_acc->ul_pkts++;
     } else {
-            ogs_info("Adding the %li bytes to urr_acc->dl_octets field, field is now %li", size, urr_acc->dl_octets);
         urr_acc->dl_octets += size;
         urr_acc->dl_pkts++;
     }
@@ -378,9 +375,9 @@ static void sgwu_sess_urr_acc_timers_cb(void *data)
 
     ogs_debug("sgwu_time_threshold_cb() triggered!");
 
-    /* If the URR hasn't been deleted from the session */
+    /* Only if the URR hasn't been deleted from
+     * the session do we start another one */
     if (ogs_pfcp_urr_find(pfcp_sess, urr->id) == urr) {
-
         if (urr->rep_triggers.quota_validity_time ||
             urr->rep_triggers.time_quota ||
             urr->rep_triggers.time_threshold) {

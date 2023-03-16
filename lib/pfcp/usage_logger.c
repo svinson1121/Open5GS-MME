@@ -94,7 +94,7 @@ static bool step(UsageLoggerState *state, time_t current_epoch_sec)
 
 static bool file_elapsed(UsageLoggerState const *state, time_t current_epoch_sec)
 {
-    return state->file_end_time <= current_epoch_sec;
+    return state->_file_end_time <= current_epoch_sec;
 }
 
 static void refresh_state(UsageLoggerState *state, time_t current_epoch_sec)
@@ -103,8 +103,8 @@ static void refresh_state(UsageLoggerState *state, time_t current_epoch_sec)
     snprintf(state->filename, FILENAME_MAX_LEN, "%lu", current_epoch_sec);
 
     /* Set the file capture window */
-    state->file_start_time = current_epoch_sec;
-    state->file_end_time = state->file_start_time + state->file_period_sec;
+    state->_file_start_time = current_epoch_sec;
+    state->_file_end_time = state->_file_start_time + state->file_period_sec;
 }
 
 static bool create_new_file(UsageLoggerState const *state)
@@ -119,8 +119,8 @@ static bool create_new_file(UsageLoggerState const *state)
     char file_capture_time_end[CAPTURE_TIME_MAX_SZ] = "";
     FILE *fptr = fopen(state->filename, "wb");
 
-    get_time_string(state->file_end_time, file_capture_time_end, CAPTURE_TIME_MAX_SZ);
-    get_time_string(state->file_start_time, file_capture_time_start, CAPTURE_TIME_MAX_SZ);
+    get_time_string(state->_file_end_time, file_capture_time_end, CAPTURE_TIME_MAX_SZ);
+    get_time_string(state->_file_start_time, file_capture_time_start, CAPTURE_TIME_MAX_SZ);
 
     if (NULL != fptr)
     {

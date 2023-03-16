@@ -116,6 +116,9 @@ void ogs_timer_delete_debug(ogs_timer_t *timer, const char *file_line)
 
         ogs_pool_free(&manager->pool, timer);
     }
+    else {
+        ogs_warn("ogs_timer_delete() was given a NULL reference to a timer");
+    }
 }
 
 void ogs_timer_start_debug(

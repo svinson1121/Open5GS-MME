@@ -205,14 +205,15 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
 
         switch(pfcp_object->type) {
         case OGS_PFCP_OBJ_PDR_TYPE:
+            bool is_uplink = false;
+            ogs_pfcp_far_t *far = NULL;
+            
             pdr = (ogs_pfcp_pdr_t *)pfcp_object;
             ogs_assert(pdr);
-            bool is_uplink = false;
             
             sess = SGWU_SESS(pdr->sess);
             ogs_assert(sess);
 
-            ogs_pfcp_far_t *far = NULL;
             far = pdr->far;
             ogs_assert(far);
 
