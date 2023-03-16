@@ -965,6 +965,10 @@ ogs_pkbuf_t *ogs_pfcp_build_session_report_request(
             }
 
             if (report->usage_report[i].vol_measurement.flags) {
+
+                ogs_info("report->usage_report[i].vol_measurement.downlink_volume = %li", report->usage_report[i].vol_measurement.downlink_volume);
+                ogs_info("report->usage_report[i].vol_measurement.uplink_volume = %li", report->usage_report[i].vol_measurement.uplink_volume);
+
                 req->usage_report[i].volume_measurement.presence = 1;
                 ogs_pfcp_build_volume_measurement(
                         &req->usage_report[i].volume_measurement,

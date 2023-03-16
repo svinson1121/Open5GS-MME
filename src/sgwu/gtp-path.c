@@ -228,12 +228,15 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
             far = pdr->far;
             ogs_assert(far);
 
+            /* Check if FAR is Downlink */
+            if (far->dst_if == OGS_PFCP_INTERFACE_ACCESS)
+                ogs_info("far is downlink");
+
             ogs_info("far->dst_if = %i", far->dst_if);
             if (far->dst_if == OGS_PFCP_INTERFACE_CORE) {
+                ogs_info("far is uplink");
                 is_ul = true;
             }
-
-            ogs_info("Adding the %i bytes to the downlink field, teid is %i : is_ul = %i", gtpu_data_length, teid, is_ul);
 
             /* Increment total & dl octets + pkts */
             for (i = 0; i < pdr->num_of_urr; i++)

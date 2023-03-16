@@ -264,9 +264,12 @@ void sgwu_sess_urr_acc_add(sgwu_sess_t *sess, ogs_pfcp_urr_t *urr, size_t size, 
     urr_acc->total_octets += size;
     urr_acc->total_pkts++;
     if (is_uplink) {
+            ogs_info("Adding the %li bytes to urr_acc->ul_octets field, field is now %li", size, urr_acc->ul_octets);
+
         urr_acc->ul_octets += size;
         urr_acc->ul_pkts++;
     } else {
+            ogs_info("Adding the %li bytes to urr_acc->dl_octets field, field is now %li", size, urr_acc->dl_octets);
         urr_acc->dl_octets += size;
         urr_acc->dl_pkts++;
     }
