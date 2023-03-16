@@ -171,8 +171,7 @@ int sgwu_sess_remove(sgwu_sess_t *sess)
 {
     ogs_assert(sess);
 
-    // todo fix the fatal relting to this
-    // sgwu_sess_urr_acc_remove_all(sess);
+    sgwu_sess_urr_acc_remove_all(sess);
 
     ogs_list_remove(&self.sess_list, sess);
     ogs_pfcp_sess_clear(&sess->pfcp);
@@ -406,6 +405,7 @@ static void sgwu_sess_urr_acc_validity_time_setup(sgwu_sess_t *sess, ogs_pfcp_ur
     ogs_timer_start(urr_acc->t_validity_time,
             ogs_time_from_sec(urr->quota_validity_time));
 }
+
 static void sgwu_sess_urr_acc_time_quota_setup(sgwu_sess_t *sess, ogs_pfcp_urr_t *urr)
 {
     sgwu_sess_urr_acc_t *urr_acc = &sess->urr_acc[urr->id];
@@ -417,6 +417,7 @@ static void sgwu_sess_urr_acc_time_quota_setup(sgwu_sess_t *sess, ogs_pfcp_urr_t
                                         sgwu_sess_urr_acc_timers_cb, urr);
     ogs_timer_start(urr_acc->t_time_quota, ogs_time_from_sec(urr->time_quota));
 }
+
 static void sgwu_sess_urr_acc_time_threshold_setup(sgwu_sess_t *sess, ogs_pfcp_urr_t *urr)
 {
     sgwu_sess_urr_acc_t *urr_acc = &sess->urr_acc[urr->id];

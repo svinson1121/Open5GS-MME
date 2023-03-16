@@ -41,6 +41,9 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
     uint32_t teid;
     uint8_t qfi;
 
+    int i;
+    int gtpu_data_length;
+
     ogs_assert(fd != INVALID_SOCKET);
 
     pkbuf = ogs_pkbuf_alloc(packet_pool, OGS_MAX_PKT_LEN);
@@ -119,6 +122,15 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
 
     /* Remove GTP header and send packets to peer NF */
     len = ogs_gtpu_header_len(pkbuf);
+    gtpu_data_length = pkbuf->len - len;
+
+    ogs_info("len = %i", len);
+    ogs_info("teid = %i", teid);
+    ogs_info("gtp_h->length = %i", gtp_h->length);
+    ogs_info("be32toh(gtp_h->length) = %i", be32toh(gtp_h->length));
+    ogs_info("pkbuf->len = %i", pkbuf->len);
+    ogs_info("gtpu_data_length = %i", gtpu_data_length);
+
     if (len < 0) {
         ogs_error("[DROP] Cannot decode GTPU packet");
         ogs_log_hexdump(OGS_LOG_ERROR, pkbuf->data, pkbuf->len);
@@ -132,7 +144,7 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
     }
     ogs_assert(ogs_pkbuf_pull(pkbuf, len));
 
-    if (gtp_h->type == OGS_GTPU_MSGTYPE_END_MARKER) {
+    if (gtp_h->type == OGS_GTPU_MSGTYPE_END_MARKER) { // potentially ul only
         ogs_pfcp_object_t *pfcp_object = NULL;
         ogs_pfcp_pdr_t *pdr = NULL;
         ogs_pkbuf_t *sendbuf = NULL;
@@ -159,6 +171,8 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
         ogs_assert(sendbuf);
 
         /* Forward packet */
+        // prehaps sendbuf->len has the data size we seekanswers we seek?
+        ogs_info("\tDoing the forward pachet thing with %i bytes", gtpu_data_length);
         ogs_pfcp_send_g_pdu(pdr, gtp_h->type, sendbuf);
 
     } else if (gtp_h->type == OGS_GTPU_MSGTYPE_ERR_IND) {
@@ -182,7 +196,7 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
             ogs_error("[DROP] Cannot find FAR by Error-Indication");
             ogs_log_hexdump(OGS_LOG_ERROR, pkbuf->data, pkbuf->len);
         }
-    } else if (gtp_h->type == OGS_GTPU_MSGTYPE_GPDU) {
+    } else if (gtp_h->type == OGS_GTPU_MSGTYPE_GPDU) { // potentially dl only
         struct ip *ip_h = NULL;
         ogs_pfcp_object_t *pfcp_object = NULL;
         ogs_pfcp_sess_t *pfcp_sess = NULL;
@@ -192,15 +206,27 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
         ogs_assert(ip_h);
 
         pfcp_object = ogs_pfcp_object_find_by_teid(teid);
+        ogs_info("\tpfcp_object => %p (should not be nil)", pfcp_object);
         if (!pfcp_object) {
             /* TODO : Send Error Indication */
             goto cleanup;
         }
+        ogs_info("\tpfcp_object->type => %i (was 2 for dl)", pfcp_object->type);
 
         switch(pfcp_object->type) {
         case OGS_PFCP_OBJ_PDR_TYPE:
             pdr = (ogs_pfcp_pdr_t *)pfcp_object;
             ogs_assert(pdr);
+            
+            sess = SGWU_SESS(pdr->sess);
+            ogs_assert(sess);
+
+            ogs_info("Adding the %i bytes to the downlink field", gtpu_data_length);
+
+            /* Increment total & dl octets + pkts */
+            for (i = 0; i < pdr->num_of_urr; i++)
+                sgwu_sess_urr_acc_add(sess, pdr->urr[i], gtpu_data_length, false);
+
             break;
         case OGS_PFCP_OBJ_SESS_TYPE:
             pfcp_sess = (ogs_pfcp_sess_t *)pfcp_object;

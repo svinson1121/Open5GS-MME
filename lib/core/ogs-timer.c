@@ -102,19 +102,20 @@ ogs_timer_t *ogs_timer_add(
 
 void ogs_timer_delete_debug(ogs_timer_t *timer, const char *file_line)
 {
-    ogs_timer_mgr_t *manager;
-    ogs_assert(timer);
-    manager = timer->manager;
-    ogs_assert(manager);
-    timer = ogs_timer_cycle(manager, timer);
-    if (!timer) {
-        ogs_fatal("ogs_timer_delete() failed in %s", file_line);
-        ogs_assert_if_reached();
+    if (timer) {
+        ogs_timer_mgr_t *manager;
+        manager = timer->manager;
+        ogs_assert(manager);
+        timer = ogs_timer_cycle(manager, timer);
+        if (!timer) {
+            ogs_fatal("ogs_timer_delete() failed in %s", file_line);
+            ogs_assert_if_reached();
+        }
+
+        ogs_timer_stop(timer);
+
+        ogs_pool_free(&manager->pool, timer);
     }
-
-    ogs_timer_stop(timer);
-
-    ogs_pool_free(&manager->pool, timer);
 }
 
 void ogs_timer_start_debug(
