@@ -1526,6 +1526,15 @@ void sgwc_sxa_handle_session_report_request(
             usageLoggerData.octets_in = volume.uplink_volume;
             usageLoggerData.octets_out = volume.downlink_volume;
 
+            // todo fill placeholders
+            strcpy(usageLoggerData.event, "<event placeholder>");
+            strcpy(usageLoggerData.charging_id, "<charging_id placeholder>");
+            strcpy(usageLoggerData.msisdn, "<msisdn placeholder>");
+            strcpy(usageLoggerData.ue_imei, "<ue_imei placeholder>");
+            strcpy(usageLoggerData.mSTimeZone, "<mSTimeZone placeholder>");
+            strcpy(usageLoggerData.cellId, "<cellId placeholder>");
+            strcpy(usageLoggerData.ue_ip, "<ue_ip placeholder>");
+
             time_t current_epoch_sec = time(NULL);
             bool log_res = log_usage_data(&ogs_pfcp_self()->usageLoggerState, current_epoch_sec, usageLoggerData);
 

@@ -47,9 +47,28 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
         {
             int fprint_result = fprintf(
                 fptr,
-                "%li,%s,%s,%u,%lu,%lu\n",
+                "%li,"   /* epoch */
+                "%s,"    /* imsi */
+                "%s,"    /* event */
+                "%s,"    /* charging_id */
+                "%s,"    /* msisdn */
+                "%s,"    /* ue_imei */
+                "%s,"    /* mSTimeZone */
+                "%s,"    /* cellId */
+                "%s,"    /* ue_ip */
+                "%s,"    /* apn */
+                "%u,"    /* qci */
+                "%lu,"   /* octets_in */
+                "%lu\n", /* octets_out */
                 current_epoch_sec,
                 data.imsi,
+                data.event,
+                data.charging_id,
+                data.msisdn,
+                data.ue_imei,
+                data.mSTimeZone,
+                data.cellId,
+                data.ue_ip,
                 data.apn,
                 data.qci,
                 data.octets_in,

@@ -33,7 +33,8 @@ enum
     ORIGIN_STR_MAX_LEN = 32,
     IPV4_STR_MAX_LEN = 16,
     IMSI_STR_MAX_LEN = 16,
-    APN_STR_MAX_LEN = 16
+    APN_STR_MAX_LEN = 16,
+    PLACEHOLDER_STR_MAX_LEN = 32,
 };
 
 typedef struct
@@ -43,8 +44,16 @@ typedef struct
     uint8_t qci;
     uint64_t octets_in;
     uint64_t octets_out;
-    // int events;
-    // int tracking_area;
+
+    // todo placeholders have been set to strings
+    // this probably isnt the case for all of them
+    char event[PLACEHOLDER_STR_MAX_LEN];
+    char charging_id[PLACEHOLDER_STR_MAX_LEN];
+    char msisdn[PLACEHOLDER_STR_MAX_LEN];
+    char ue_imei[PLACEHOLDER_STR_MAX_LEN];
+    char mSTimeZone[PLACEHOLDER_STR_MAX_LEN];
+    char cellId[PLACEHOLDER_STR_MAX_LEN];
+    char ue_ip[PLACEHOLDER_STR_MAX_LEN];
 } UsageLoggerData;
 
 typedef struct
