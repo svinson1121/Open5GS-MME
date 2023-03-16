@@ -240,6 +240,8 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
 
             /* Increment total & dl octets + pkts */
             for (i = 0; i < pdr->num_of_urr; i++)
+            // i think whats happening here is that there is no pdr attached to the downlink
+            // i dont even think this is being ran
                 sgwu_sess_urr_acc_add(sess, pdr->urr[i], gtpu_data_length, is_ul);
 
             break;
