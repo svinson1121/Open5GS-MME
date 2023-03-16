@@ -42,7 +42,7 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
     uint8_t qfi;
 
     int i;
-    int gtpu_data_length;
+    size_t gtpu_data_length;
 
     ogs_assert(fd != INVALID_SOCKET);
 
@@ -122,15 +122,8 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
 
     /* Remove GTP header and send packets to peer NF */
     len = ogs_gtpu_header_len(pkbuf);
+    ogs_assert(len <= pkbuf->len);
     gtpu_data_length = pkbuf->len - len;
-
-        ogs_info("len = %i", len);
-        ogs_info("teid = %i", teid);
-        ogs_info("gtp_h->length = %i", gtp_h->length);
-        ogs_info("be32toh(gtp_h->length) = %i", be32toh(gtp_h->length));
-        ogs_info("pkbuf->len = %i", pkbuf->len);
-        ogs_info("gtpu_data_length = %i", gtpu_data_length);
-    // mapping somewhere that says if its a downlink or uplink teid
 
     if (len < 0) {
         ogs_error("[DROP] Cannot decode GTPU packet");
@@ -172,8 +165,6 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
         ogs_assert(sendbuf);
 
         /* Forward packet */
-        // prehaps sendbuf->len has the data size we seekanswers we seek?
-        ogs_info("\tDoing the forward pachet thing with %i bytes", gtpu_data_length);
         ogs_pfcp_send_g_pdu(pdr, gtp_h->type, sendbuf);
 
     } else if (gtp_h->type == OGS_GTPU_MSGTYPE_ERR_IND) {
@@ -197,7 +188,7 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
             ogs_error("[DROP] Cannot find FAR by Error-Indication");
             ogs_log_hexdump(OGS_LOG_ERROR, pkbuf->data, pkbuf->len);
         }
-    } else if (gtp_h->type == OGS_GTPU_MSGTYPE_GPDU) { // potentially dl only
+    } else if (gtp_h->type == OGS_GTPU_MSGTYPE_GPDU) {
         struct ip *ip_h = NULL;
         ogs_pfcp_object_t *pfcp_object = NULL;
         ogs_pfcp_sess_t *pfcp_sess = NULL;
@@ -207,19 +198,16 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
         ogs_assert(ip_h);
 
         pfcp_object = ogs_pfcp_object_find_by_teid(teid);
-        ogs_info("\tpfcp_object => %p (should not be nil)", pfcp_object);
         if (!pfcp_object) {
             /* TODO : Send Error Indication */
             goto cleanup;
         }
-        ogs_info("\tpfcp_object->type => %i (was 2 for dl)", pfcp_object->type);
 
         switch(pfcp_object->type) {
         case OGS_PFCP_OBJ_PDR_TYPE:
-            ogs_info("OGS_PFCP_OBJ_PDR_TYPE - teid = %i", teid);
             pdr = (ogs_pfcp_pdr_t *)pfcp_object;
             ogs_assert(pdr);
-            bool is_ul = false;
+            bool is_uplink = false;
             
             sess = SGWU_SESS(pdr->sess);
             ogs_assert(sess);
@@ -228,25 +216,16 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
             far = pdr->far;
             ogs_assert(far);
 
-            /* Check if FAR is Downlink */
-            if (far->dst_if == OGS_PFCP_INTERFACE_ACCESS)
-                ogs_info("far is downlink");
-
-            ogs_info("far->dst_if = %i", far->dst_if);
+            /* Check if FAR is Uplink */
             if (far->dst_if == OGS_PFCP_INTERFACE_CORE) {
-                ogs_info("far is uplink");
-                is_ul = true;
+                is_uplink = true;
             }
 
-            /* Increment total & dl octets + pkts */
             for (i = 0; i < pdr->num_of_urr; i++)
-            // i think whats happening here is that there is no pdr attached to the downlink
-            // i dont even think this is being ran
-                sgwu_sess_urr_acc_add(sess, pdr->urr[i], gtpu_data_length, is_ul);
+                sgwu_sess_urr_acc_add(sess, pdr->urr[i], gtpu_data_length, is_uplink);
 
             break;
         case OGS_PFCP_OBJ_SESS_TYPE:
-            ogs_info("OGS_PFCP_OBJ_SESS_TYPE - teid = %i", teid);
             pfcp_sess = (ogs_pfcp_sess_t *)pfcp_object;
             ogs_assert(pfcp_sess);
 

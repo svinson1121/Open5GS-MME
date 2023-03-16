@@ -345,7 +345,7 @@ int ogs_pfcp_context_parse_config(const char *local, const char *remote)
 
                             if (!strcmp("True", cdr_enabled) || 
                                 !strcmp("true", cdr_enabled)) {
-                                ogs_info("EIR functionality has been enabled");
+                                ogs_info("CDR functionality has been enabled");
                                 enabled = true;
                             }
                             else {

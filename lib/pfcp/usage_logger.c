@@ -26,15 +26,6 @@ static void get_time_string(time_t time, char *buf, size_t buf_sz);
 static bool create_new_file(UsageLoggerState const *state);
 static bool step(UsageLoggerState *state, time_t current_epoch_sec);
 
-// #SGW CDR File
-// #File Start Time: 12:00:00
-// #File End Time: 12:30:00
-// #Origin: SGW-01
-
-// #SGW IP: 10.3.4.5 (SGW IP Address from YAML config)
-// #epoch,imsi,event,charging_id,msisdn,ue_imei,mSTimeZone,cellId,ue_ip,apn,qci,octects_in, octets_out
-// 1678939865,738006100000007,session_start,841928490129803419082,0402535225,356765068155660,2B01,1813038300641303830000AA20,100.64.0.4,internet,9,1238872487213,8742198739821
-
 bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLoggerData data)
 {
     bool result = false;
@@ -140,7 +131,6 @@ static bool create_new_file(UsageLoggerState const *state)
             "# File End Time: %s\n"
             "# Origin: %s\n"
             "# SGW IP: %s (SGW IP Address from YAML config)\n"
-            // "# imsi,apn,qci,octets_in,octets_out\n"
             "# epoch,imsi,event,charging_id,msisdn,ue_imei,mSTimeZone,cellId,ue_ip,apn,qci,octets_in,octets_out\n",
             file_capture_time_start,
             file_capture_time_end,

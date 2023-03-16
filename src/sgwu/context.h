@@ -87,7 +87,7 @@ typedef struct sgwu_sess_s {
     ogs_pfcp_node_t *pfcp_node;
 
     /* Accounting: */
-    sgwu_sess_urr_acc_t urr_acc[OGS_MAX_NUM_OF_URR]; /* FIXME: This probably needs to be mved to a hashtable or alike */
+    sgwu_sess_urr_acc_t urr_acc[OGS_MAX_NUM_OF_URR];
 } sgwu_sess_t;
 
 void sgwu_context_init(void);

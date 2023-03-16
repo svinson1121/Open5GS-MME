@@ -304,9 +304,6 @@ void sgwu_sess_urr_acc_fill_usage_report(sgwu_sess_t *sess, const ogs_pfcp_urr_t
     ogs_time_t last_report_timestamp;
     ogs_time_t now;
 
-    ogs_info("urr_acc->dl_octets = %li", urr_acc->dl_octets);
-    ogs_info("urr_acc->dl_octets = %li", urr_acc->ul_octets);
-
     now = ogs_time_now(); /* we need UTC for start_time and end_time */
 
     if (urr_acc->last_report.timestamp)
@@ -333,13 +330,6 @@ void sgwu_sess_urr_acc_fill_usage_report(sgwu_sess_t *sess, const ogs_pfcp_urr_t
         .uplink_n_packets = urr_acc->ul_pkts - urr_acc->last_report.ul_pkts,
         .downlink_n_packets = urr_acc->dl_pkts - urr_acc->last_report.dl_pkts,
     };
-
-    ogs_info("just before encoding report->usage_report[idx].vol_measurement.uplink_volume = %li", report->usage_report[idx].vol_measurement.uplink_volume);
-    ogs_info("just before encoding report->usage_report[idx].vol_measurement.downlink_volume = %li", report->usage_report[idx].vol_measurement.downlink_volume);
-    ogs_info("just before encoding urr_acc->ul_octets = %li", urr_acc->ul_octets);
-    ogs_info("just before encoding urr_acc->dl_octets = %li", urr_acc->dl_octets);
-
-
 
     if (now >= last_report_timestamp)
         report->usage_report[idx].dur_measurement = ((now - last_report_timestamp) + (OGS_USEC_PER_SEC/2)) / OGS_USEC_PER_SEC; /* FIXME: should use MONOTONIC here */
