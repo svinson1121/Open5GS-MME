@@ -145,7 +145,7 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
     }
     ogs_assert(ogs_pkbuf_pull(pkbuf, len));
 
-    if (gtp_h->type == OGS_GTPU_MSGTYPE_END_MARKER) { // potentially ul only
+    if (gtp_h->type == OGS_GTPU_MSGTYPE_END_MARKER) {
         ogs_pfcp_object_t *pfcp_object = NULL;
         ogs_pfcp_pdr_t *pdr = NULL;
         ogs_pkbuf_t *sendbuf = NULL;
@@ -219,15 +219,25 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
             ogs_info("OGS_PFCP_OBJ_PDR_TYPE - teid = %i", teid);
             pdr = (ogs_pfcp_pdr_t *)pfcp_object;
             ogs_assert(pdr);
+            bool is_ul = false;
             
             sess = SGWU_SESS(pdr->sess);
             ogs_assert(sess);
 
-            ogs_info("Adding the %i bytes to the downlink field, teid is %i", gtpu_data_length, teid);
+            ogs_pfcp_far_t *far = NULL;
+            far = pdr->far;
+            ogs_assert(far);
+
+            ogs_info("far->dst_if = %i", far->dst_if);
+            if (far->dst_if == OGS_PFCP_INTERFACE_CORE) {
+                is_ul = true;
+            }
+
+            ogs_info("Adding the %i bytes to the downlink field, teid is %i : is_ul = %i", gtpu_data_length, teid, is_ul);
 
             /* Increment total & dl octets + pkts */
             for (i = 0; i < pdr->num_of_urr; i++)
-                sgwu_sess_urr_acc_add(sess, pdr->urr[i], gtpu_data_length, false);
+                sgwu_sess_urr_acc_add(sess, pdr->urr[i], gtpu_data_length, is_ul);
 
             break;
         case OGS_PFCP_OBJ_SESS_TYPE:
