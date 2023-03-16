@@ -31,6 +31,7 @@ enum
 {
     FILENAME_MAX_LEN = 32,
     ORIGIN_STR_MAX_LEN = 32,
+    IPV4_STR_MAX_LEN = 16,
     IMSI_STR_MAX_LEN = 16,
     APN_STR_MAX_LEN = 16
 };
@@ -53,6 +54,7 @@ typedef struct
      * the log files. E.g. "SGW-01" */
     bool enabled;
     char origin[ORIGIN_STR_MAX_LEN];
+    char sgw_ip[IPV4_STR_MAX_LEN];
 
     /* The following are to be used 
      * internally by the module and

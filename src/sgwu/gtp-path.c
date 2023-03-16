@@ -124,12 +124,13 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
     len = ogs_gtpu_header_len(pkbuf);
     gtpu_data_length = pkbuf->len - len;
 
-    ogs_info("len = %i", len);
-    ogs_info("teid = %i", teid);
-    ogs_info("gtp_h->length = %i", gtp_h->length);
-    ogs_info("be32toh(gtp_h->length) = %i", be32toh(gtp_h->length));
-    ogs_info("pkbuf->len = %i", pkbuf->len);
-    ogs_info("gtpu_data_length = %i", gtpu_data_length);
+        ogs_info("len = %i", len);
+        ogs_info("teid = %i", teid);
+        ogs_info("gtp_h->length = %i", gtp_h->length);
+        ogs_info("be32toh(gtp_h->length) = %i", be32toh(gtp_h->length));
+        ogs_info("pkbuf->len = %i", pkbuf->len);
+        ogs_info("gtpu_data_length = %i", gtpu_data_length);
+    // mapping somewhere that says if its a downlink or uplink teid
 
     if (len < 0) {
         ogs_error("[DROP] Cannot decode GTPU packet");
@@ -215,13 +216,14 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
 
         switch(pfcp_object->type) {
         case OGS_PFCP_OBJ_PDR_TYPE:
+            ogs_info("OGS_PFCP_OBJ_PDR_TYPE - teid = %i", teid);
             pdr = (ogs_pfcp_pdr_t *)pfcp_object;
             ogs_assert(pdr);
             
             sess = SGWU_SESS(pdr->sess);
             ogs_assert(sess);
 
-            ogs_info("Adding the %i bytes to the downlink field", gtpu_data_length);
+            ogs_info("Adding the %i bytes to the downlink field, teid is %i", gtpu_data_length, teid);
 
             /* Increment total & dl octets + pkts */
             for (i = 0; i < pdr->num_of_urr; i++)
@@ -229,6 +231,7 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
 
             break;
         case OGS_PFCP_OBJ_SESS_TYPE:
+            ogs_info("OGS_PFCP_OBJ_SESS_TYPE - teid = %i", teid);
             pfcp_sess = (ogs_pfcp_sess_t *)pfcp_object;
             ogs_assert(pfcp_sess);
 

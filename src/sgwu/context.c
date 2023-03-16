@@ -301,6 +301,8 @@ void sgwu_sess_urr_acc_fill_usage_report(sgwu_sess_t *sess, const ogs_pfcp_urr_t
     ogs_time_t last_report_timestamp;
     ogs_time_t now;
 
+    ogs_info("[DELETION] - urr_acc->dl_octets = %li", urr_acc->dl_octets);
+
     now = ogs_time_now(); /* we need UTC for start_time and end_time */
 
     if (urr_acc->last_report.timestamp)
