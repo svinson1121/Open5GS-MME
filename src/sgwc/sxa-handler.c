@@ -24,6 +24,7 @@
 
 static void log_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_report_request_t *pfcp_req);
 static void log_deletion_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_deletion_response_t *pfcp_rsp);
+static bool hex_array_to_string(uint8_t* hex_array, size_t hex_array_len, char* hex_string, size_t hex_string_len);
 
 static uint8_t gtp_cause_from_pfcp(uint8_t pfcp_cause)
 {
@@ -1553,7 +1554,9 @@ static void log_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_report_request
         strcpy(usageLoggerData.charging_id, "<charging_id placeholder>");
         strncpy(usageLoggerData.msisdn_bcd, sgwc_ue->msisdn_bcd, MSISDN_BCD_STR_MAX_LEN);
         strncpy(usageLoggerData.imeisv_bcd, sgwc_ue->imeisv_bcd, IMEISV_BCD_STR_MAX_LEN);
-        strcpy(usageLoggerData.mSTimeZone, "<mSTimeZone placeholder>");
+        if (!hex_array_to_string(sgwc_ue->timezone_raw, sgwc_ue->timezone_raw_len, usageLoggerData.timezone_raw, TIMEZONE_RAW_STR_MAX_LEN)) {
+            ogs_error("Failed to convert raw timezone bytes to timezone string!");
+        }
         strcpy(usageLoggerData.cellId, "<cellId placeholder>");
         strcpy(usageLoggerData.ue_ip, "<ue_ip placeholder>");
 
@@ -1617,7 +1620,7 @@ static void log_deletion_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_delet
         strcpy(usageLoggerData.charging_id, "<charging_id placeholder>");
         strncpy(usageLoggerData.msisdn_bcd, sgwc_ue->msisdn_bcd, MSISDN_BCD_STR_MAX_LEN);
         strncpy(usageLoggerData.imeisv_bcd, sgwc_ue->imeisv_bcd, IMEISV_BCD_STR_MAX_LEN);
-        strcpy(usageLoggerData.mSTimeZone, "<mSTimeZone placeholder>");
+        strcpy(usageLoggerData.timezone_raw, "<timezone_raw placeholder>");
         strcpy(usageLoggerData.cellId, "<cellId placeholder>");
         strcpy(usageLoggerData.ue_ip, "<ue_ip placeholder>");
 
@@ -1628,4 +1631,17 @@ static void log_deletion_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_delet
             ogs_info("Failed to log usage data to file %s", ogs_pfcp_self()->usageLoggerState.filename);
         }
     }
+}
+
+static bool hex_array_to_string(uint8_t* hex_array, size_t hex_array_len, char* hex_string, size_t hex_string_len) {
+    int i;
+    for (i = 0; i < hex_array_len; i++) {
+        if (hex_string_len < i) {
+            return false;
+        }
+        
+        sprintf(hex_string + (i * 2), "%02X", hex_array[i]);
+    }
+
+    return true;
 }

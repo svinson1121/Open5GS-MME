@@ -44,7 +44,7 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 "%s,"    /* charging_id */
                 "%s,"    /* msisdn */
                 "%s,"    /* ue_imei */
-                "%s,"    /* mSTimeZone */
+                "%s,"    /* timezone_raw */
                 "%s,"    /* cellId */
                 "%s,"    /* ue_ip */
                 "%s,"    /* apn */
@@ -57,7 +57,7 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 data.charging_id,
                 data.msisdn_bcd,
                 data.imeisv_bcd,
-                data.mSTimeZone,
+                data.timezone_raw,
                 data.cellId,
                 data.ue_ip,
                 data.apn,

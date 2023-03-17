@@ -36,6 +36,7 @@ enum
     APN_STR_MAX_LEN = 16,
     MSISDN_BCD_STR_MAX_LEN = 16,
     IMEISV_BCD_STR_MAX_LEN = 32,
+    TIMEZONE_RAW_STR_MAX_LEN = 16,
     PLACEHOLDER_STR_MAX_LEN = 32,
 };
 
@@ -53,7 +54,7 @@ typedef struct
     char charging_id[PLACEHOLDER_STR_MAX_LEN];
     char msisdn_bcd[MSISDN_BCD_STR_MAX_LEN];
     char imeisv_bcd[IMEISV_BCD_STR_MAX_LEN];
-    char mSTimeZone[PLACEHOLDER_STR_MAX_LEN];
+    char timezone_raw[TIMEZONE_RAW_STR_MAX_LEN];
     char cellId[PLACEHOLDER_STR_MAX_LEN];
     char ue_ip[PLACEHOLDER_STR_MAX_LEN];
 } UsageLoggerData;

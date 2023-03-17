@@ -68,6 +68,10 @@ typedef struct sgwc_ue_s {
     int imeisv_len;
     char  imeisv_bcd[OGS_MAX_IMEISV_BCD_LEN+1];
 
+    /* Timezone */
+    uint8_t timezone_raw[OGS_MAX_TIMEZONE_RAW_LEN];
+    int timezone_raw_len;
+
     /* User-Location-Info */
     bool            uli_presence;
     ogs_eps_tai_t   e_tai;

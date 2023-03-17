@@ -234,6 +234,12 @@ void sgwc_s11_handle_create_session_request(
         ogs_buffer_to_bcd(sgwc_ue->imeisv, sgwc_ue->imeisv_len, sgwc_ue->imeisv_bcd);
     }
 
+    /* Set UE Timezone */
+    if (req->ue_time_zone.presence) {
+        sgwc_ue->timezone_raw_len = req->ue_time_zone.len;
+        memcpy(sgwc_ue->timezone_raw, req->ue_time_zone.data, sgwc_ue->timezone_raw_len);
+    }
+
     /* Add Session */
     ogs_assert(0 < ogs_fqdn_parse(apn,
             req->access_point_name.data,
