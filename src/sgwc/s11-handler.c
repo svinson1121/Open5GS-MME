@@ -220,6 +220,14 @@ void sgwc_s11_handle_create_session_request(
         return;
     }
 
+    sgwc_ue->msisdn_len = req->msisdn.len;
+    if (0 < sgwc_ue->msisdn_len) {
+        memcpy(sgwc_ue->msisdn,
+            (uint8_t*)req->msisdn.data + 1, sgwc_ue->msisdn_len);
+        ogs_buffer_to_bcd(
+            req->msisdn.data, req->msisdn.len, sgwc_ue->msisdn_bcd);
+    }
+
     /* Add Session */
     ogs_assert(0 < ogs_fqdn_parse(apn,
             req->access_point_name.data,
