@@ -38,6 +38,7 @@ enum
     IMEISV_BCD_STR_MAX_LEN = 32,
     TIMEZONE_RAW_STR_MAX_LEN = 16,
     EVENT_STR_MAX_LEN = 32,
+    UE_IP_STR_MAX_LEN = 32,
     PLACEHOLDER_STR_MAX_LEN = 32,
 };
 
@@ -59,7 +60,7 @@ typedef struct
     uint32_t plmn;
     uint16_t tac;
     uint32_t cell_id;
-    char ue_ip[PLACEHOLDER_STR_MAX_LEN];
+    char ue_ip[UE_IP_STR_MAX_LEN];
 } UsageLoggerData;
 
 typedef struct

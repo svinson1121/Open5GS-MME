@@ -240,6 +240,12 @@ void sgwc_s11_handle_create_session_request(
         memcpy(sgwc_ue->timezone_raw, req->ue_time_zone.data, sgwc_ue->timezone_raw_len);
     }
 
+    /* UE IP address */
+    if (req->pdn_address_allocation.presence) {
+        sgwc_ue->ip_raw_len = req->pdn_address_allocation.len;
+        memcpy(sgwc_ue->ip_raw, req->pdn_address_allocation.data, sgwc_ue->ip_raw_len);
+    }
+
     /* Add Session */
     ogs_assert(0 < ogs_fqdn_parse(apn,
             req->access_point_name.data,
