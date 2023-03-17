@@ -34,7 +34,8 @@ enum
     IPV4_STR_MAX_LEN = 16,
     IMSI_STR_MAX_LEN = 16,
     APN_STR_MAX_LEN = 16,
-    MSISDN_STR_MAX_LEN = 16,
+    MSISDN_BCD_STR_MAX_LEN = 16,
+    IMEISV_BCD_STR_MAX_LEN = 32,
     PLACEHOLDER_STR_MAX_LEN = 32,
 };
 
@@ -50,8 +51,8 @@ typedef struct
     // this probably isnt the case for all of them
     char event[PLACEHOLDER_STR_MAX_LEN];
     char charging_id[PLACEHOLDER_STR_MAX_LEN];
-    char msisdn[MSISDN_STR_MAX_LEN];
-    char ue_imei[PLACEHOLDER_STR_MAX_LEN];
+    char msisdn_bcd[MSISDN_BCD_STR_MAX_LEN];
+    char imeisv_bcd[IMEISV_BCD_STR_MAX_LEN];
     char mSTimeZone[PLACEHOLDER_STR_MAX_LEN];
     char cellId[PLACEHOLDER_STR_MAX_LEN];
     char ue_ip[PLACEHOLDER_STR_MAX_LEN];

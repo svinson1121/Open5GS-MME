@@ -220,10 +220,18 @@ void sgwc_s11_handle_create_session_request(
         return;
     }
 
-    sgwc_ue->msisdn_len = req->msisdn.len;
-    if (0 < sgwc_ue->msisdn_len) {
+    /* Set MSISDN */
+    if (req->msisdn.presence) {
+        sgwc_ue->msisdn_len = req->msisdn.len;
         memcpy(sgwc_ue->msisdn, req->msisdn.data, sgwc_ue->msisdn_len);
-        ogs_buffer_to_bcd(req->msisdn.data, req->msisdn.len, sgwc_ue->msisdn_bcd);
+        ogs_buffer_to_bcd(sgwc_ue->msisdn, sgwc_ue->msisdn_len, sgwc_ue->msisdn_bcd);
+    }
+
+    /* Set IMEI(SV) */
+    if (req->me_identity.presence) {
+        sgwc_ue->imeisv_len = req->me_identity.len;
+        memcpy(sgwc_ue->imeisv, req->me_identity.data, sgwc_ue->imeisv_len);
+        ogs_buffer_to_bcd(sgwc_ue->imeisv, sgwc_ue->imeisv_len, sgwc_ue->imeisv_bcd);
     }
 
     /* Add Session */

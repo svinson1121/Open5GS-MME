@@ -1551,8 +1551,8 @@ static void log_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_report_request
         // todo fill placeholders
         strcpy(usageLoggerData.event, "<event placeholder>");
         strcpy(usageLoggerData.charging_id, "<charging_id placeholder>");
-        strncpy(usageLoggerData.msisdn, sgwc_ue->msisdn_bcd, MSISDN_STR_MAX_LEN);
-        strcpy(usageLoggerData.ue_imei, "<ue_imei placeholder>");
+        strncpy(usageLoggerData.msisdn_bcd, sgwc_ue->msisdn_bcd, MSISDN_BCD_STR_MAX_LEN);
+        strncpy(usageLoggerData.imeisv_bcd, sgwc_ue->imeisv_bcd, IMEISV_BCD_STR_MAX_LEN);
         strcpy(usageLoggerData.mSTimeZone, "<mSTimeZone placeholder>");
         strcpy(usageLoggerData.cellId, "<cellId placeholder>");
         strcpy(usageLoggerData.ue_ip, "<ue_ip placeholder>");
@@ -1615,8 +1615,8 @@ static void log_deletion_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_delet
         // todo fill placeholders
         strcpy(usageLoggerData.event, "<event placeholder>");
         strcpy(usageLoggerData.charging_id, "<charging_id placeholder>");
-        strncpy(usageLoggerData.msisdn, sgwc_ue->msisdn_bcd, MSISDN_STR_MAX_LEN);
-        strcpy(usageLoggerData.ue_imei, "<ue_imei placeholder>");
+        strncpy(usageLoggerData.msisdn_bcd, sgwc_ue->msisdn_bcd, MSISDN_BCD_STR_MAX_LEN);
+        strncpy(usageLoggerData.imeisv_bcd, sgwc_ue->imeisv_bcd, IMEISV_BCD_STR_MAX_LEN);
         strcpy(usageLoggerData.mSTimeZone, "<mSTimeZone placeholder>");
         strcpy(usageLoggerData.cellId, "<cellId placeholder>");
         strcpy(usageLoggerData.ue_ip, "<ue_ip placeholder>");
