@@ -222,10 +222,8 @@ void sgwc_s11_handle_create_session_request(
 
     sgwc_ue->msisdn_len = req->msisdn.len;
     if (0 < sgwc_ue->msisdn_len) {
-        memcpy(sgwc_ue->msisdn,
-            (uint8_t*)req->msisdn.data + 1, sgwc_ue->msisdn_len);
-        ogs_buffer_to_bcd(
-            req->msisdn.data, req->msisdn.len, sgwc_ue->msisdn_bcd);
+        memcpy(sgwc_ue->msisdn, req->msisdn.data, sgwc_ue->msisdn_len);
+        ogs_buffer_to_bcd(req->msisdn.data, req->msisdn.len, sgwc_ue->msisdn_bcd);
     }
 
     /* Add Session */
