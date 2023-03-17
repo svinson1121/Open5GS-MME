@@ -22,6 +22,9 @@
 #include "sxa-handler.h"
 #include "usage_logger.h"
 
+static void log_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_report_request_t *pfcp_req);
+static void log_deletion_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_deletion_response_t *pfcp_rsp);
+
 static uint8_t gtp_cause_from_pfcp(uint8_t pfcp_cause)
 {
     switch (pfcp_cause) {
@@ -1294,6 +1297,10 @@ void sgwc_sxa_handle_session_deletion_response(
         cause_value = OGS_GTP2_CAUSE_MANDATORY_IE_MISSING;
     }
 
+    if (pfcp_rsp->usage_report->presence) {
+        log_deletion_usage_reports(sess, pfcp_rsp);
+    }
+
     gtp_xact = pfcp_xact->assoc_xact;
 
     ogs_pfcp_xact_commit(pfcp_xact);
@@ -1489,59 +1496,136 @@ void sgwc_sxa_handle_session_report_request(
         }
 
     } else if (report_type.usage_report) {
-        int i = 0;
-        for (i = 0; i < OGS_ARRAY_SIZE(pfcp_req->usage_report); i++) {
-            ogs_pfcp_tlv_usage_report_session_report_request_t *use_rep =
-                &pfcp_req->usage_report[i];
-            ogs_pfcp_volume_measurement_t volume;
-            UsageLoggerData usageLoggerData = {0};
-
-            if (0 == use_rep->presence) {
-                /* We have reached the end of the usage_report list */
-                break;
-            }
-            if (0 == use_rep->urr_id.presence) {
-                ogs_error("Usage report URR has no ID field!");
-                continue;
-            }
-            if (0 == use_rep->volume_measurement.presence) {
-                ogs_error("No volume measurements in usage report!");
-                continue;
-            }
-
-            ogs_pfcp_parse_volume_measurement(&volume, &use_rep->volume_measurement);
-            if (0 == volume.ulvol) {
-                ogs_error("URR did not contain uplink volume measurement!");
-                continue;
-            } 
-            if (0 == volume.dlvol) {
-                ogs_error("URR did not contain downlink volume measurement!");
-                continue;
-            }
-
-            strncpy(usageLoggerData.imsi, sgwc_ue->imsi_bcd, IMSI_STR_MAX_LEN);
-            strncpy(usageLoggerData.apn, sess->session.name, APN_STR_MAX_LEN);
-            usageLoggerData.qci = sess->session.qos.arp.priority_level;
-            usageLoggerData.octets_in = volume.uplink_volume;
-            usageLoggerData.octets_out = volume.downlink_volume;
-
-            // todo fill placeholders
-            strcpy(usageLoggerData.event, "<event placeholder>");
-            strcpy(usageLoggerData.charging_id, "<charging_id placeholder>");
-            strcpy(usageLoggerData.msisdn, "<msisdn placeholder>");
-            strcpy(usageLoggerData.ue_imei, "<ue_imei placeholder>");
-            strcpy(usageLoggerData.mSTimeZone, "<mSTimeZone placeholder>");
-            strcpy(usageLoggerData.cellId, "<cellId placeholder>");
-            strcpy(usageLoggerData.ue_ip, "<ue_ip placeholder>");
-
-            time_t current_epoch_sec = time(NULL);
-            bool log_res = log_usage_data(&ogs_pfcp_self()->usageLoggerState, current_epoch_sec, usageLoggerData);
-
-            if (!log_res) {
-                ogs_info("Failed to log usage data to file %s", ogs_pfcp_self()->usageLoggerState.filename);
-            }
-        }
+        log_usage_reports(sess, pfcp_req);
     } else {
         ogs_error("Not supported Report Type[%d]", report_type.value);
+    }
+}
+
+static void log_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_report_request_t *pfcp_req) {
+    int i = 0;
+    sgwc_ue_t *sgwc_ue = NULL;
+    
+    ogs_assert(sess);
+    sgwc_ue = sess->sgwc_ue;
+    ogs_assert(sgwc_ue);
+
+    for (i = 0; i < OGS_ARRAY_SIZE(pfcp_req->usage_report); i++) {
+        ogs_pfcp_tlv_usage_report_session_report_request_t *usage_report =
+            &pfcp_req->usage_report[i];
+
+        ogs_pfcp_volume_measurement_t volume;
+        UsageLoggerData usageLoggerData = {0};
+
+        if (0 == usage_report->presence) {
+            /* We have reached the end of the usage_report list */
+            break;
+        }
+
+        if (0 == usage_report->urr_id.presence) {
+            ogs_error("Usage report URR has no ID field!");
+            continue;
+        }
+
+        if (0 == usage_report->volume_measurement.presence) {
+            ogs_error("No volume measurements in usage report!");
+            continue;
+        }
+
+        ogs_pfcp_parse_volume_measurement(&volume, &usage_report->volume_measurement);
+        if (0 == volume.ulvol) {
+            ogs_error("URR did not contain uplink volume measurement!");
+            continue;
+        } 
+        if (0 == volume.dlvol) {
+            ogs_error("URR did not contain downlink volume measurement!");
+            continue;
+        }
+
+        strncpy(usageLoggerData.imsi, sgwc_ue->imsi_bcd, IMSI_STR_MAX_LEN);
+        strncpy(usageLoggerData.apn, sess->session.name, APN_STR_MAX_LEN);
+        usageLoggerData.qci = sess->session.qos.arp.priority_level;
+        usageLoggerData.octets_in = volume.uplink_volume;
+        usageLoggerData.octets_out = volume.downlink_volume;
+
+        // todo fill placeholders
+        strcpy(usageLoggerData.event, "<event placeholder>");
+        strcpy(usageLoggerData.charging_id, "<charging_id placeholder>");
+        strcpy(usageLoggerData.msisdn, "<msisdn placeholder>");
+        strcpy(usageLoggerData.ue_imei, "<ue_imei placeholder>");
+        strcpy(usageLoggerData.mSTimeZone, "<mSTimeZone placeholder>");
+        strcpy(usageLoggerData.cellId, "<cellId placeholder>");
+        strcpy(usageLoggerData.ue_ip, "<ue_ip placeholder>");
+
+        time_t current_epoch_sec = time(NULL);
+        bool log_res = log_usage_data(&ogs_pfcp_self()->usageLoggerState, current_epoch_sec, usageLoggerData);
+
+        if (!log_res) {
+            ogs_info("Failed to log usage data to file %s", ogs_pfcp_self()->usageLoggerState.filename);
+        }
+    }
+}
+
+static void log_deletion_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_deletion_response_t *pfcp_rsp) {
+    int i = 0;
+    sgwc_ue_t *sgwc_ue = NULL;
+    
+    ogs_assert(sess);
+    sgwc_ue = sess->sgwc_ue;
+    ogs_assert(sgwc_ue);
+
+    for (i = 0; i < OGS_ARRAY_SIZE(pfcp_rsp->usage_report); i++) {
+        ogs_pfcp_tlv_usage_report_session_deletion_response_t *usage_report =
+            &pfcp_rsp->usage_report[i];
+
+        ogs_pfcp_volume_measurement_t volume;
+        UsageLoggerData usageLoggerData = {0};
+
+        if (0 == usage_report->presence) {
+            /* We have reached the end of the usage_report list */
+            break;
+        }
+
+        if (0 == usage_report->urr_id.presence) {
+            ogs_error("Usage report URR has no ID field!");
+            continue;
+        }
+
+        if (0 == usage_report->volume_measurement.presence) {
+            ogs_error("No volume measurements in usage report!");
+            continue;
+        }
+
+        ogs_pfcp_parse_volume_measurement(&volume, &usage_report->volume_measurement);
+        if (0 == volume.ulvol) {
+            ogs_error("URR did not contain uplink volume measurement!");
+            continue;
+        } 
+        if (0 == volume.dlvol) {
+            ogs_error("URR did not contain downlink volume measurement!");
+            continue;
+        }
+
+        strncpy(usageLoggerData.imsi, sgwc_ue->imsi_bcd, IMSI_STR_MAX_LEN);
+        strncpy(usageLoggerData.apn, sess->session.name, APN_STR_MAX_LEN);
+        usageLoggerData.qci = sess->session.qos.arp.priority_level;
+        usageLoggerData.octets_in = volume.uplink_volume;
+        usageLoggerData.octets_out = volume.downlink_volume;
+
+        // todo fill placeholders
+        strcpy(usageLoggerData.event, "<event placeholder>");
+        strcpy(usageLoggerData.charging_id, "<charging_id placeholder>");
+        strcpy(usageLoggerData.msisdn, "<msisdn placeholder>");
+        strcpy(usageLoggerData.ue_imei, "<ue_imei placeholder>");
+        strcpy(usageLoggerData.mSTimeZone, "<mSTimeZone placeholder>");
+        strcpy(usageLoggerData.cellId, "<cellId placeholder>");
+        strcpy(usageLoggerData.ue_ip, "<ue_ip placeholder>");
+
+        time_t current_epoch_sec = time(NULL);
+        bool log_res = log_usage_data(&ogs_pfcp_self()->usageLoggerState, current_epoch_sec, usageLoggerData);
+
+        if (!log_res) {
+            ogs_info("Failed to log usage data to file %s", ogs_pfcp_self()->usageLoggerState.filename);
+        }
     }
 }
