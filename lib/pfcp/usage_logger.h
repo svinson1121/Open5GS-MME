@@ -37,6 +37,7 @@ enum
     MSISDN_BCD_STR_MAX_LEN = 16,
     IMEISV_BCD_STR_MAX_LEN = 32,
     TIMEZONE_RAW_STR_MAX_LEN = 16,
+    EVENT_STR_MAX_LEN = 32,
     PLACEHOLDER_STR_MAX_LEN = 32,
 };
 
@@ -50,12 +51,14 @@ typedef struct
 
     // todo placeholders have been set to strings
     // this probably isnt the case for all of them
-    char event[PLACEHOLDER_STR_MAX_LEN];
+    char event[EVENT_STR_MAX_LEN];
     char charging_id[PLACEHOLDER_STR_MAX_LEN];
     char msisdn_bcd[MSISDN_BCD_STR_MAX_LEN];
     char imeisv_bcd[IMEISV_BCD_STR_MAX_LEN];
     char timezone_raw[TIMEZONE_RAW_STR_MAX_LEN];
-    char cellId[PLACEHOLDER_STR_MAX_LEN];
+    uint32_t plmn;
+    uint16_t tac;
+    uint32_t cell_id;
     char ue_ip[PLACEHOLDER_STR_MAX_LEN];
 } UsageLoggerData;
 

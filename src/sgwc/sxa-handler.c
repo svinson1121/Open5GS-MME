@@ -1532,7 +1532,9 @@ static void log_start_usage_reports(sgwc_sess_t *sess) {
     if (!hex_array_to_string(sgwc_ue->timezone_raw, sgwc_ue->timezone_raw_len, usageLoggerData.timezone_raw, TIMEZONE_RAW_STR_MAX_LEN)) {
         ogs_error("Failed to convert raw timezone bytes to timezone string!");
     }
-    strcpy(usageLoggerData.cellId, "<cellId placeholder>");
+    usageLoggerData.plmn = ogs_plmn_id_hexdump(&sgwc_ue->e_tai.plmn_id);
+    usageLoggerData.tac = sgwc_ue->e_tai.tac;
+    usageLoggerData.cell_id = sgwc_ue->e_cgi.cell_id;
     strcpy(usageLoggerData.ue_ip, "<ue_ip placeholder>");
 
     time_t current_epoch_sec = time(NULL);
@@ -1597,7 +1599,9 @@ static void log_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_report_request
         if (!hex_array_to_string(sgwc_ue->timezone_raw, sgwc_ue->timezone_raw_len, usageLoggerData.timezone_raw, TIMEZONE_RAW_STR_MAX_LEN)) {
             ogs_error("Failed to convert raw timezone bytes to timezone string!");
         }
-        strcpy(usageLoggerData.cellId, "<cellId placeholder>");
+        usageLoggerData.plmn = ogs_plmn_id_hexdump(&sgwc_ue->e_tai.plmn_id);
+        usageLoggerData.tac = sgwc_ue->e_tai.tac;
+        usageLoggerData.cell_id = sgwc_ue->e_cgi.cell_id;
         strcpy(usageLoggerData.ue_ip, "<ue_ip placeholder>");
 
         time_t current_epoch_sec = time(NULL);
@@ -1663,7 +1667,9 @@ static void log_deletion_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_delet
         if (!hex_array_to_string(sgwc_ue->timezone_raw, sgwc_ue->timezone_raw_len, usageLoggerData.timezone_raw, TIMEZONE_RAW_STR_MAX_LEN)) {
             ogs_error("Failed to convert raw timezone bytes to timezone string!");
         }
-        strcpy(usageLoggerData.cellId, "<cellId placeholder>");
+        usageLoggerData.plmn = ogs_plmn_id_hexdump(&sgwc_ue->e_tai.plmn_id);
+        usageLoggerData.tac = sgwc_ue->e_tai.tac;
+        usageLoggerData.cell_id = sgwc_ue->e_cgi.cell_id;
         strcpy(usageLoggerData.ue_ip, "<ue_ip placeholder>");
 
         time_t current_epoch_sec = time(NULL);

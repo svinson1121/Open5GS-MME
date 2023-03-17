@@ -45,7 +45,9 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 "%s,"    /* msisdn */
                 "%s,"    /* ue_imei */
                 "%s,"    /* timezone_raw */
-                "%s,"    /* cellId */
+                "%u,"    /* plmn */
+                "%u,"    /* tac */
+                "%u,"    /* cell_id */
                 "%s,"    /* ue_ip */
                 "%s,"    /* apn */
                 "%u,"    /* qci */
@@ -58,7 +60,9 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 data.msisdn_bcd,
                 data.imeisv_bcd,
                 data.timezone_raw,
-                data.cellId,
+                data.plmn,
+                data.tac,
+                data.cell_id,
                 data.ue_ip,
                 data.apn,
                 data.qci,
@@ -131,7 +135,7 @@ static bool create_new_file(UsageLoggerState const *state)
             "# File End Time: %s\n"
             "# Origin: %s\n"
             "# SGW IP: %s (SGW IP Address from YAML config)\n"
-            "# epoch,imsi,event,charging_id,msisdn,ue_imei,mSTimeZone,cellId,ue_ip,apn,qci,octets_in,octets_out\n",
+            "# epoch,imsi,event,charging_id,msisdn,ue_imei,timezone_raw,plmn,tac,cell_id,ue_ip,apn,qci,octets_in,octets_out\n",
             file_capture_time_start,
             file_capture_time_end,
             state->origin,
