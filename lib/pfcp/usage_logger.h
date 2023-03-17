@@ -59,8 +59,9 @@ typedef struct
     char timezone_raw[TIMEZONE_RAW_STR_MAX_LEN];
     uint32_t plmn;
     uint16_t tac;
-    uint32_t cell_id;
+    uint32_t eci;
     char ue_ip[UE_IP_STR_MAX_LEN];
+    char pgw_ip[PLACEHOLDER_STR_MAX_LEN];
 } UsageLoggerData;
 
 typedef struct
