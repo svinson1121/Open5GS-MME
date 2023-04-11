@@ -71,7 +71,8 @@ typedef struct
      * origin specifies what is generating
      * the log files. E.g. "SGW-01" */
     bool enabled;
-    uint64_t file_period_sec;
+    uint64_t file_capture_period_sec;
+    uint64_t reporting_period_sec;
     char origin[ORIGIN_STR_MAX_LEN];
 
     /* The following are to be used 

@@ -84,7 +84,8 @@ sgwc:
       - addr: 127.0.0.3
     cdr:
       enabled: True
-      period_sec: 1800
+      file_capture_period_sec: 1800
+      reporting_period_sec: 10
       sgw_name: SGW-01
 
 #

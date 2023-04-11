@@ -527,7 +527,7 @@ sgwc_bearer_t *sgwc_bearer_add(sgwc_sess_t *sess)
 
         urr->meas_method = OGS_PFCP_MEASUREMENT_METHOD_DURATION;
         urr->rep_triggers.time_threshold = 1;
-        urr->time_threshold = ogs_pfcp_self()->usageLoggerState.file_period_sec;
+        urr->time_threshold = ogs_pfcp_self()->usageLoggerState.reporting_period_sec;
         /* Enable Immediate Start Time Metering */
         urr->meas_info.istm = 1;
     }

@@ -335,6 +335,12 @@ int ogs_pfcp_context_parse_config(const char *local, const char *remote)
                     ogs_yaml_iter_t cdr_iter;
                     ogs_yaml_iter_recurse(&local_iter, &cdr_iter);
 
+                    /* Set defaults */
+                    self.usageLoggerState.enabled = false;
+                    self.usageLoggerState.file_capture_period_sec = 1800;
+                    self.usageLoggerState.reporting_period_sec = 10;
+                    strncpy(self.usageLoggerState.origin, "undefined", OGS_SGW_NAME_MAX_LEN - 1);
+
                     while (ogs_yaml_iter_next(&cdr_iter)) {
                         const char *cdr_key = ogs_yaml_iter_key(&cdr_iter);
                         ogs_assert(cdr_key);
@@ -352,14 +358,23 @@ int ogs_pfcp_context_parse_config(const char *local, const char *remote)
                                 enabled = false;
                             }
                             self.usageLoggerState.enabled = enabled;
-                        } else if (!strcmp(cdr_key, "period_sec")) {
-                            int period_sec = -1;
-                            const char *period_sec_str = ogs_yaml_iter_value(&cdr_iter);
-                            if (period_sec_str)
-                                period_sec = atoi(period_sec_str);
+                        } else if (!strcmp(cdr_key, "file_capture_period_sec")) {
+                            int file_capture_period_sec = 0;
+                            const char *file_capture_period_sec_str = ogs_yaml_iter_value(&cdr_iter);
+                            if (file_capture_period_sec_str)
+                                file_capture_period_sec = atoi(file_capture_period_sec_str);
 
-                            if (0 < period_sec) {
-                                self.usageLoggerState.file_period_sec = (unsigned)period_sec;
+                            if (0 < file_capture_period_sec) {
+                                self.usageLoggerState.file_capture_period_sec = (unsigned)file_capture_period_sec;
+                            }
+                        } else if (!strcmp(cdr_key, "reporting_period_sec")) {
+                            int reporting_period_sec = 0;
+                            const char *reporting_period_sec_str = ogs_yaml_iter_value(&cdr_iter);
+                            if (reporting_period_sec_str)
+                                reporting_period_sec = atoi(reporting_period_sec_str);
+
+                            if (0 < reporting_period_sec) {
+                                self.usageLoggerState.reporting_period_sec = (unsigned)reporting_period_sec;
                             }
                         } else if (!strcmp(cdr_key, "sgw_name")) {
                             const char *cdr_sgw_name = ogs_yaml_iter_value(&cdr_iter);
