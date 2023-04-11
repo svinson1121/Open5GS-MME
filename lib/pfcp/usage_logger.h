@@ -39,6 +39,7 @@ enum
     TIMEZONE_RAW_STR_MAX_LEN = 16,
     EVENT_STR_MAX_LEN = 32,
     UE_IP_STR_MAX_LEN = 32,
+    PGW_IP_STR_MAX_LEN = 32,
     PLACEHOLDER_STR_MAX_LEN = 32,
 };
 
@@ -61,7 +62,7 @@ typedef struct
     uint16_t tac;
     uint32_t eci;
     char ue_ip[UE_IP_STR_MAX_LEN];
-    char pgw_ip[PLACEHOLDER_STR_MAX_LEN];
+    char pgw_ip[PGW_IP_STR_MAX_LEN];
 } UsageLoggerData;
 
 typedef struct

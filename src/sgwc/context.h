@@ -72,9 +72,13 @@ typedef struct sgwc_ue_s {
     uint8_t timezone_raw[OGS_MAX_TIMEZONE_RAW_LEN];
     int timezone_raw_len;
 
-    /* IP */
-    uint8_t ip_raw[OGS_MAX_IP_RAW_LEN]; // Fixme theres a better way to do this
-    int ip_raw_len;
+    /* UE IP */
+    uint8_t ue_ip_raw[OGS_MAX_IP_RAW_LEN];
+    int ue_ip_raw_len;
+
+    /* PGW IP */
+    uint8_t pgw_ip_raw[OGS_MAX_IP_RAW_LEN];
+    int pgw_ip_raw_len;
 
     /* User-Location-Info */
     bool            uli_presence;

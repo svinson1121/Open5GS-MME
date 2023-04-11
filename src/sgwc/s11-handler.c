@@ -240,10 +240,16 @@ void sgwc_s11_handle_create_session_request(
         memcpy(sgwc_ue->timezone_raw, req->ue_time_zone.data, sgwc_ue->timezone_raw_len);
     }
 
-    /* UE IP address */
+    /* PDA Address Allocation (PAA) */
     if (req->pdn_address_allocation.presence) {
-        sgwc_ue->ip_raw_len = req->pdn_address_allocation.len;
-        memcpy(sgwc_ue->ip_raw, req->pdn_address_allocation.data, sgwc_ue->ip_raw_len);
+        sgwc_ue->ue_ip_raw_len = req->pdn_address_allocation.len;
+        memcpy(sgwc_ue->ue_ip_raw, req->pdn_address_allocation.data, sgwc_ue->ue_ip_raw_len);
+    }
+
+    /* PGW IP address */
+    if (req->pgw_s5_s8_address_for_control_plane_or_pmip.presence) {
+        sgwc_ue->pgw_ip_raw_len = req->pgw_s5_s8_address_for_control_plane_or_pmip.len;
+        memcpy(sgwc_ue->pgw_ip_raw, req->pgw_s5_s8_address_for_control_plane_or_pmip.data, sgwc_ue->pgw_ip_raw_len);
     }
 
     /* Add Session */
