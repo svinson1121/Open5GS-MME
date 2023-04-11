@@ -38,8 +38,7 @@ enum
     IMEISV_BCD_STR_MAX_LEN = 32,
     TIMEZONE_RAW_STR_MAX_LEN = 16,
     EVENT_STR_MAX_LEN = 32,
-    UE_IP_STR_MAX_LEN = 32,
-    PGW_IP_STR_MAX_LEN = 32,
+    IP_STR_MAX_LEN = 64,
     PLACEHOLDER_STR_MAX_LEN = 32,
 };
 
@@ -61,8 +60,9 @@ typedef struct
     uint32_t plmn;
     uint16_t tac;
     uint32_t eci;
-    char ue_ip[UE_IP_STR_MAX_LEN];
-    char pgw_ip[PGW_IP_STR_MAX_LEN];
+    char sgw_ip[IP_STR_MAX_LEN]; // todo rename to gtpc_ip??
+    char ue_ip[IP_STR_MAX_LEN];
+    char pgw_ip[IP_STR_MAX_LEN];
 } UsageLoggerData;
 
 typedef struct
@@ -73,7 +73,6 @@ typedef struct
     bool enabled;
     uint64_t file_period_sec;
     char origin[ORIGIN_STR_MAX_LEN];
-    char sgw_ip[IPV4_STR_MAX_LEN];
 
     /* The following are to be used 
      * internally by the module and

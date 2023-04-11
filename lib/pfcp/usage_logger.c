@@ -48,6 +48,7 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 "%u,"    /* plmn */
                 "%u,"    /* tac */
                 "%u,"    /* eci */
+                "%s,"    /* sgw_ip */
                 "%s,"    /* ue_ip */
                 "%s,"    /* pgw_ip */
                 "%s,"    /* apn */
@@ -64,6 +65,7 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 data.plmn,
                 data.tac,
                 data.eci,
+                data.sgw_ip,
                 data.ue_ip,
                 data.pgw_ip,
                 data.apn,
@@ -133,15 +135,13 @@ static bool create_new_file(UsageLoggerState const *state)
         int fprint_result = fprintf(
             fptr,
             "# SWG CDR File:\n"
-            "# File Start Time: %s\n"
-            "# File End Time: %s\n"
+            "# File Start Time: %s (todo epoch)\n"
+            "# File End Time: %s (todo epoch)\n"
             "# Origin: %s\n"
-            "# SGW IP: %s (SGW IP Address from YAML config)\n"
-            "# epoch,imsi,event,charging_id,msisdn,ue_imei,timezone_raw,plmn,tac,eci,ue_ip,pgw_ip,apn,qci,octets_in,octets_out\n",
+            "# epoch,imsi,event,charging_id,msisdn,ue_imei,timezone_raw,plmn,tac,eci,sgw_ip,ue_ip,pgw_ip,apn,qci,octets_in,octets_out\n",
             file_capture_time_start,
             file_capture_time_end,
-            state->origin,
-            state->sgw_ip);
+            state->origin);
 
         int fclose_result = fclose(fptr);
 
