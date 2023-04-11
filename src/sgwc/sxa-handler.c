@@ -25,6 +25,8 @@
 static void log_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_report_request_t *pfcp_req);
 static void log_deletion_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_deletion_response_t *pfcp_rsp);
 static void log_start_usage_reports(sgwc_sess_t *sess);
+static UsageLoggerData build_usage_logger_data(sgwc_sess_t *sess, char const* event, uint64_t octets_in, uint64_t octets_out);
+static void log_usage_logger_data(UsageLoggerData usageLoggerData);
 static bool hex_array_to_string(uint8_t* hex_array, size_t hex_array_len, char* hex_string, size_t hex_string_len);
 
 static uint8_t gtp_cause_from_pfcp(uint8_t pfcp_cause)
@@ -1508,48 +1510,9 @@ void sgwc_sxa_handle_session_report_request(
     }
 }
 
-/* TODO refactor the following log functions to reduce duplication */
-
 static void log_start_usage_reports(sgwc_sess_t *sess) {
-    sgwc_ue_t *sgwc_ue = NULL;
-    UsageLoggerData usageLoggerData = {0};
-    
-    ogs_assert(sess);
-    sgwc_ue = sess->sgwc_ue;
-    ogs_assert(sgwc_ue);
-
-    strncpy(usageLoggerData.imsi, sgwc_ue->imsi_bcd, IMSI_STR_MAX_LEN);
-    strncpy(usageLoggerData.apn, sess->session.name, APN_STR_MAX_LEN);
-    usageLoggerData.qci = sess->session.qos.arp.priority_level;
-    usageLoggerData.octets_in = 0;
-    usageLoggerData.octets_out = 0;
-
-    // todo fill placeholders
-    strcpy(usageLoggerData.event, "session_start");
-    strcpy(usageLoggerData.charging_id, "<charging_id placeholder>");
-    strncpy(usageLoggerData.msisdn_bcd, sgwc_ue->msisdn_bcd, MSISDN_BCD_STR_MAX_LEN);
-    strncpy(usageLoggerData.imeisv_bcd, sgwc_ue->imeisv_bcd, IMEISV_BCD_STR_MAX_LEN);
-    if (!hex_array_to_string(sgwc_ue->timezone_raw, sgwc_ue->timezone_raw_len, usageLoggerData.timezone_raw, TIMEZONE_RAW_STR_MAX_LEN)) {
-        ogs_error("Failed to convert raw timezone bytes to timezone hex string!");
-    }
-    usageLoggerData.plmn = ogs_plmn_id_hexdump(&sgwc_ue->e_tai.plmn_id);
-    usageLoggerData.tac = sgwc_ue->e_tai.tac;
-    usageLoggerData.eci = sgwc_ue->e_cgi.cell_id;
-    if (!hex_array_to_string(sgwc_ue->ue_ip_raw, sgwc_ue->ue_ip_raw_len, usageLoggerData.ue_ip, IP_STR_MAX_LEN)) {
-        ogs_error("Failed to convert raw IP bytes to IP hex string!");
-    }
-    if (!hex_array_to_string(sgwc_ue->pgw_ip_raw, sgwc_ue->pgw_ip_raw_len, usageLoggerData.pgw_ip, IP_STR_MAX_LEN)) {
-        ogs_error("Failed to convert raw IP bytes to IP hex string!");
-    }
-    ogs_assert(OGS_ADDRSTRLEN < IP_STR_MAX_LEN);
-    OGS_ADDR(ogs_gtp_self()->gtpc_addr, usageLoggerData.sgw_ip);
-
-    time_t current_epoch_sec = time(NULL);
-    bool log_res = log_usage_data(&ogs_pfcp_self()->usageLoggerState, current_epoch_sec, usageLoggerData);
-
-    if (!log_res) {
-        ogs_info("Failed to log usage data to file %s", ogs_pfcp_self()->usageLoggerState.filename);
-    }
+    UsageLoggerData usageLoggerData = build_usage_logger_data(sess, "session_start", 0, 0);
+    log_usage_logger_data(usageLoggerData);
 }
 
 static void log_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_report_request_t *pfcp_req) {
@@ -1592,39 +1555,8 @@ static void log_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_report_request
             continue;
         }
 
-        strncpy(usageLoggerData.imsi, sgwc_ue->imsi_bcd, IMSI_STR_MAX_LEN);
-        strncpy(usageLoggerData.apn, sess->session.name, APN_STR_MAX_LEN);
-        usageLoggerData.qci = sess->session.qos.arp.priority_level;
-        usageLoggerData.octets_in = volume.uplink_volume;
-        usageLoggerData.octets_out = volume.downlink_volume;
-
-        // todo fill placeholders
-        strcpy(usageLoggerData.event, "session_update");
-        strcpy(usageLoggerData.charging_id, "<charging_id placeholder>");
-        strncpy(usageLoggerData.msisdn_bcd, sgwc_ue->msisdn_bcd, MSISDN_BCD_STR_MAX_LEN);
-        strncpy(usageLoggerData.imeisv_bcd, sgwc_ue->imeisv_bcd, IMEISV_BCD_STR_MAX_LEN);
-        if (!hex_array_to_string(sgwc_ue->timezone_raw, sgwc_ue->timezone_raw_len, usageLoggerData.timezone_raw, TIMEZONE_RAW_STR_MAX_LEN)) {
-            ogs_error("Failed to convert raw timezone bytes to timezone hex string!");
-        }
-        usageLoggerData.plmn = ogs_plmn_id_hexdump(&sgwc_ue->e_tai.plmn_id);
-        usageLoggerData.tac = sgwc_ue->e_tai.tac;
-        usageLoggerData.eci = sgwc_ue->e_cgi.cell_id;
-        if (!hex_array_to_string(sgwc_ue->ue_ip_raw, sgwc_ue->ue_ip_raw_len, usageLoggerData.ue_ip, IP_STR_MAX_LEN)) {
-            ogs_error("Failed to convert raw IP bytes to IP hex string!");
-        }
-        if (!hex_array_to_string(sgwc_ue->pgw_ip_raw, sgwc_ue->pgw_ip_raw_len, usageLoggerData.pgw_ip, IP_STR_MAX_LEN)) {
-            ogs_error("Failed to convert raw IP bytes to IP hex string!");
-        }
-        ogs_assert(OGS_ADDRSTRLEN < IP_STR_MAX_LEN);
-        OGS_ADDR(ogs_gtp_self()->gtpc_addr, usageLoggerData.sgw_ip);
-
-
-        time_t current_epoch_sec = time(NULL);
-        bool log_res = log_usage_data(&ogs_pfcp_self()->usageLoggerState, current_epoch_sec, usageLoggerData);
-
-        if (!log_res) {
-            ogs_error("Failed to log usage data to file %s", ogs_pfcp_self()->usageLoggerState.filename);
-        }
+        usageLoggerData = build_usage_logger_data(sess, "session_update", volume.uplink_volume, volume.downlink_volume);
+        log_usage_logger_data(usageLoggerData);
     }
 }
 
@@ -1668,39 +1600,53 @@ static void log_deletion_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_delet
             continue;
         }
 
-        strncpy(usageLoggerData.imsi, sgwc_ue->imsi_bcd, IMSI_STR_MAX_LEN);
-        strncpy(usageLoggerData.apn, sess->session.name, APN_STR_MAX_LEN);
-        usageLoggerData.qci = sess->session.qos.arp.priority_level;
-        usageLoggerData.octets_in = volume.uplink_volume;
-        usageLoggerData.octets_out = volume.downlink_volume;
+        usageLoggerData = build_usage_logger_data(sess, "session_end", volume.uplink_volume, volume.downlink_volume);
+        log_usage_logger_data(usageLoggerData);
+    }
+}
 
-        // todo fill placeholders
-        strcpy(usageLoggerData.event, "session_end");
-        strcpy(usageLoggerData.charging_id, "<charging_id placeholder>");
-        strncpy(usageLoggerData.msisdn_bcd, sgwc_ue->msisdn_bcd, MSISDN_BCD_STR_MAX_LEN);
-        strncpy(usageLoggerData.imeisv_bcd, sgwc_ue->imeisv_bcd, IMEISV_BCD_STR_MAX_LEN);
-        if (!hex_array_to_string(sgwc_ue->timezone_raw, sgwc_ue->timezone_raw_len, usageLoggerData.timezone_raw, TIMEZONE_RAW_STR_MAX_LEN)) {
-            ogs_error("Failed to convert raw timezone bytes to timezone hex string!");
-        }
-        usageLoggerData.plmn = ogs_plmn_id_hexdump(&sgwc_ue->e_tai.plmn_id);
-        usageLoggerData.tac = sgwc_ue->e_tai.tac;
-        usageLoggerData.eci = sgwc_ue->e_cgi.cell_id;
-        if (!hex_array_to_string(sgwc_ue->ue_ip_raw, sgwc_ue->ue_ip_raw_len, usageLoggerData.ue_ip, IP_STR_MAX_LEN)) {
-            ogs_error("Failed to convert raw IP bytes to IP hex string!");
-        }
-        if (!hex_array_to_string(sgwc_ue->pgw_ip_raw, sgwc_ue->pgw_ip_raw_len, usageLoggerData.pgw_ip, IP_STR_MAX_LEN)) {
-            ogs_error("Failed to convert raw IP bytes to IP hex string!");
-        }
-        ogs_assert(OGS_ADDRSTRLEN < IP_STR_MAX_LEN);
-        OGS_ADDR(ogs_gtp_self()->gtpc_addr, usageLoggerData.sgw_ip);
+static UsageLoggerData build_usage_logger_data(sgwc_sess_t *sess, char const* event, uint64_t octets_in, uint64_t octets_out) {
+    sgwc_ue_t *sgwc_ue = NULL;
+    UsageLoggerData usageLoggerData = {0};
+    
+    ogs_assert(sess);
+    sgwc_ue = sess->sgwc_ue;
+    ogs_assert(sgwc_ue);
 
+    strncpy(usageLoggerData.event, event, EVENT_STR_MAX_LEN);
+    strncpy(usageLoggerData.imsi, sgwc_ue->imsi_bcd, IMSI_STR_MAX_LEN);
+    strncpy(usageLoggerData.apn, sess->session.name, APN_STR_MAX_LEN);
+    usageLoggerData.qci = sess->session.qos.arp.priority_level;
+    usageLoggerData.octets_in = octets_in;
+    usageLoggerData.octets_out = octets_out;
 
-        time_t current_epoch_sec = time(NULL);
-        bool log_res = log_usage_data(&ogs_pfcp_self()->usageLoggerState, current_epoch_sec, usageLoggerData);
+    strcpy(usageLoggerData.charging_id, "<charging_id placeholder>");
+    strncpy(usageLoggerData.msisdn_bcd, sgwc_ue->msisdn_bcd, MSISDN_BCD_STR_MAX_LEN);
+    strncpy(usageLoggerData.imeisv_bcd, sgwc_ue->imeisv_bcd, IMEISV_BCD_STR_MAX_LEN);
+    if (!hex_array_to_string(sgwc_ue->timezone_raw, sgwc_ue->timezone_raw_len, usageLoggerData.timezone_raw, TIMEZONE_RAW_STR_MAX_LEN)) {
+        ogs_error("Failed to convert raw timezone bytes to timezone hex string!");
+    }
+    usageLoggerData.plmn = ogs_plmn_id_hexdump(&sgwc_ue->e_tai.plmn_id);
+    usageLoggerData.tac = sgwc_ue->e_tai.tac;
+    usageLoggerData.eci = sgwc_ue->e_cgi.cell_id;
+    if (!hex_array_to_string(sgwc_ue->ue_ip_raw, sgwc_ue->ue_ip_raw_len, usageLoggerData.ue_ip, IP_STR_MAX_LEN)) {
+        ogs_error("Failed to convert raw IP bytes to IP hex string!");
+    }
+    if (!hex_array_to_string(sgwc_ue->pgw_ip_raw, sgwc_ue->pgw_ip_raw_len, usageLoggerData.pgw_ip, IP_STR_MAX_LEN)) {
+        ogs_error("Failed to convert raw IP bytes to IP hex string!");
+    }
+    ogs_assert(OGS_ADDRSTRLEN < IP_STR_MAX_LEN);
+    OGS_ADDR(ogs_gtp_self()->gtpc_addr, usageLoggerData.sgw_ip);
 
-        if (!log_res) {
-            ogs_info("Failed to log usage data to file %s", ogs_pfcp_self()->usageLoggerState.filename);
-        }
+    return usageLoggerData;
+}
+
+static void log_usage_logger_data(UsageLoggerData usageLoggerData) {
+    time_t current_epoch_sec = time(NULL);
+    bool log_res = log_usage_data(&ogs_pfcp_self()->usageLoggerState, current_epoch_sec, usageLoggerData);
+
+    if (!log_res) {
+        ogs_info("Failed to log usage data to file %s", ogs_pfcp_self()->usageLoggerState.filename);
     }
 }
 
