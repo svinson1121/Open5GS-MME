@@ -40,7 +40,6 @@ extern "C" {
 
 #define OGS_MAX_NUM_OF_DEV      16
 #define OGS_MAX_NUM_OF_SUBNET   16
-#define OGS_SGW_NAME_MAX_LEN    16
 
 typedef struct ogs_pfcp_node_s ogs_pfcp_node_t;
 

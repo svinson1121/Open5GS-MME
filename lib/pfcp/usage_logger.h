@@ -51,8 +51,6 @@ typedef struct
     uint64_t octets_in;
     uint64_t octets_out;
 
-    // todo placeholders have been set to strings
-    // this probably isnt the case for all of them
     char event[EVENT_STR_MAX_LEN];
     char charging_id[PLACEHOLDER_STR_MAX_LEN];
     char msisdn_bcd[MSISDN_BCD_STR_MAX_LEN];
@@ -61,7 +59,7 @@ typedef struct
     uint32_t plmn;
     uint16_t tac;
     uint32_t eci;
-    char sgw_ip[IP_STR_MAX_LEN]; // todo rename to gtpc_ip??
+    char sgw_ip[IP_STR_MAX_LEN];
     char ue_ip[IP_STR_MAX_LEN];
     char pgw_ip[IP_STR_MAX_LEN];
 } UsageLoggerData;
