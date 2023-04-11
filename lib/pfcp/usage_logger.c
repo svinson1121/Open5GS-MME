@@ -108,7 +108,7 @@ static bool file_elapsed(UsageLoggerState const *state, time_t current_epoch_sec
 static void refresh_state(UsageLoggerState *state, time_t current_epoch_sec)
 {
     /* Generate and set filename */
-    snprintf(state->filename, FILENAME_MAX_LEN, "%lu", current_epoch_sec);
+    snprintf(state->filename, FILENAME_MAX_LEN, "%s/%lu", state->log_dir, current_epoch_sec);
 
     /* Set the file capture window */
     state->_file_start_time = current_epoch_sec;
@@ -137,13 +137,13 @@ static bool create_new_file(UsageLoggerState const *state)
             "# SWG CDR File:\n"
             "# File Start Time: %s (%li)\n"
             "# File End Time: %s (%li)\n"
-            "# Origin: %s\n"
+            "# SGW Name: %s\n"
             "# epoch,imsi,event,charging_id,msisdn,ue_imei,timezone_raw,plmn,tac,eci,sgw_ip,ue_ip,pgw_ip,apn,qci,octets_in,octets_out\n",
             file_capture_time_start,
             state->_file_end_time,
             file_capture_time_end,
             state->_file_start_time,
-            state->origin);
+            state->sgw_name);
 
         int fclose_result = fclose(fptr);
 

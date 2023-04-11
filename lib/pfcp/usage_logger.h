@@ -29,8 +29,8 @@
 
 enum
 {
-    FILENAME_MAX_LEN = 32,
-    ORIGIN_STR_MAX_LEN = 32,
+    FILENAME_MAX_LEN = 128,
+    SGW_NAME_STR_MAX_LEN = 32,
     IPV4_STR_MAX_LEN = 16,
     IMSI_STR_MAX_LEN = 16,
     APN_STR_MAX_LEN = 16,
@@ -39,6 +39,7 @@ enum
     TIMEZONE_RAW_STR_MAX_LEN = 16,
     EVENT_STR_MAX_LEN = 32,
     IP_STR_MAX_LEN = 64,
+    LOG_DIR_STR_MAX_LEN = 64,
     PLACEHOLDER_STR_MAX_LEN = 32,
 };
 
@@ -67,13 +68,12 @@ typedef struct
 
 typedef struct
 {
-    /* Developer should set these fields.
-     * origin specifies what is generating
-     * the log files. E.g. "SGW-01" */
+    /* Developer should set these fields (E.g. via config) */
     bool enabled;
     uint64_t file_capture_period_sec;
     uint64_t reporting_period_sec;
-    char origin[ORIGIN_STR_MAX_LEN];
+    char sgw_name[SGW_NAME_STR_MAX_LEN];
+    char log_dir[LOG_DIR_STR_MAX_LEN];
 
     /* The following are to be used 
      * internally by the module and

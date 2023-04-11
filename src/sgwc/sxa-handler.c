@@ -1623,7 +1623,7 @@ static void log_usage_reports(sgwc_sess_t *sess, ogs_pfcp_session_report_request
         bool log_res = log_usage_data(&ogs_pfcp_self()->usageLoggerState, current_epoch_sec, usageLoggerData);
 
         if (!log_res) {
-            ogs_info("Failed to log usage data to file %s", ogs_pfcp_self()->usageLoggerState.filename);
+            ogs_error("Failed to log usage data to file %s", ogs_pfcp_self()->usageLoggerState.filename);
         }
     }
 }
