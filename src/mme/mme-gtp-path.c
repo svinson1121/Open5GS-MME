@@ -341,7 +341,7 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
         context.domain_suffix
     );
 
-    /* Clobber the PGW IP */
+    /* Clobber the SGW addr */
     Resolve_APN(&context, ipv4); // only needs to return 1 ip, the one with the highest priotity, if not there is some magic to rng the dns weight and priority
     ogs_ipv4_from_string((uint32_t*)&sgw_ue->gnode->addr.sa.sa_data[2], ipv4);
 

@@ -162,6 +162,12 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
         req->pgw_s5_s8_address_for_control_plane_or_pmip.len = len;
     }
 
+    /* Clobber the PGW addr */
+    char ip[] = "55.66.77.88";
+    uint32_t addr = 0;
+    ogs_ipv4_from_string(&addr, ip);
+    pgw_s5c_teid.addr = addr;
+
     req->access_point_name.presence = 1;
     req->access_point_name.len = ogs_fqdn_build(
             apn, session->name, strlen(session->name));
