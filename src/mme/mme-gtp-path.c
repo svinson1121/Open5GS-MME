@@ -201,6 +201,28 @@ void mme_gtp_close(void)
     ogs_socknode_remove_all(&ogs_gtp_self()->gtpc_list6);
 }
 
+
+/*  these get populated with the relevant things in the conext */
+/* so when the mnc and mcc dont match the ones in the serving network and the sub identity rhen its a s8 otherwise if it matches its s5 */
+typedef struct {
+    char target[8];        // "pgw"
+    char interface[8];     // "s5"
+    char protocol[8];      // "gtp"
+    char apn[32];           // "mms"
+    char mnc[8];           // "001"
+    char mcc[8];           // "100"
+    char domain_suffix[64]; // ".3gppnetwork.org.nickvsnetworking.com";
+} ResolverContext;
+
+/* Making the assumpion that the ip string buffer 
+ * has enough space to contain any kind of ip */
+static bool Resolve_APN(ResolverContext *context, char* ip) {
+    (void)context;
+    strcpy(ip, "10.0.0.56");
+    strcpy(ip, "11.22.33.44");
+    return false;
+}
+
 int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
 {
     int rv;
@@ -229,6 +251,126 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
         ogs_error("mme_s11_build_create_session_request() failed");
         return OGS_ERROR;
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // ogs_sockaddr_t * addr = ogs_list_last(sgw_ue->gnode->sa_list);
+    // ogs_addaddrinfo(&addr, AF_INET, "22.22.22.22", 4000, 0);
+
+    
+
+    // char buf[66];
+    // printf("[!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1] Create  peer [%s]:%d\n",
+    //         OGS_ADDR(addr, buf),
+    //         OGS_PORT(&sgw_ue->gnode->addr));
+
+
+// we need to find how the address is put into the gnode
+
+
+    /* The gnode stores (all?) the address the mme sends the CSR to.
+     * We want to change that address to our own address.
+     * xact refers to the sgw_ue->gnode, the same gnode with the send socket information.
+     * The xact is later used to get the gnode->addr.sa for sending 
+     * When we loaded the config there were multiple addr that were stored? */
+
+    printf("sgw_ue->gnode->addr.sa.sa_data: '%s'\n", sgw_ue->gnode->addr.sa.sa_data);
+    for (int r = 0; r < 14; ++r) {
+        printf("%02x ", sgw_ue->gnode->addr.sa.sa_data[r]);
+    }
+    printf("\n");
+
+
+    ogs_sockaddr_t *addr = sgw_ue->gnode->sa_list;
+    // we could totally create a new addr then set it like the memcpy below
+    // memcpy(&sgw_ue->gnode->addr, addr->next, sizeof(sgw_ue->gnode->addr));
+    while(NULL != addr) {
+        printf("addr->hostname: '%s'\n", ogs_ipv4_to_string(*((uint32_t*)&addr->sa.sa_data[2])));
+        addr = addr->next;
+    }
+
+
+    /* maybe add this to the if-else tree above */
+    enum { IPV4_STR_SZ = 16 };
+    char ipv4[IPV4_STR_SZ] = "";
+    ResolverContext context = {};
+
+    /* TODO function to populate the context? */
+    strcpy(context.target, "pgw");
+    strcpy(context.interface, "s5");
+    strcpy(context.protocol, "gtp");
+    strcpy(context.apn, sess->session->name);
+    sprintf(context.mcc, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
+    sprintf(context.mnc, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
+    strcpy(context.domain_suffix, ".3gppnetwork.org.nickvsnetworking.com");
+
+    printf("Context:\n"
+        "\ttarget        : '%s'\n"
+        "\tinterface     : '%s'\n"
+        "\tprotocol      : '%s'\n"
+        "\tapn           : '%s'\n"
+        "\tmcc           : '%s'\n"
+        "\tmnc           : '%s'\n"
+        "\tdomain_suffix : '%s'\n",
+        context.target,
+        context.interface,
+        context.protocol,
+        context.apn,
+        context.mcc,
+        context.mnc,
+        context.domain_suffix
+    );
+
+    /* Clobber the PGW IP */
+    Resolve_APN(&context, ipv4); // only needs to return 1 ip, the one with the highest priotity, if not there is some magic to rng the dns weight and priority
+    ogs_ipv4_from_string((uint32_t*)&sgw_ue->gnode->addr.sa.sa_data[2], ipv4);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 
     xact = ogs_gtp_xact_local_create(sgw_ue->gnode, &h, pkbuf, timeout, sess);
     if (!xact) {
