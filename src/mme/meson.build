@@ -90,7 +90,8 @@ libmme = static_library('mme',
                     libnas_eps_dep,
                     libdiameter_s6a_dep,
                     libdiameter_s13_dep,
-                    libgtp_dep],
+                    libgtp_dep,
+                    libdnsresolvers_dep],
     include_directories : libhiredis_inc,
     install : false)
 
@@ -103,7 +104,8 @@ libmme_dep = declare_dependency(
                     libdiameter_s6a_dep,
                     libdiameter_s13_dep,
                     libgtp_dep,
-                    libhiredis_dep])
+                    libhiredis_dep,
+                    libdnsresolvers_dep])
 
 mme_sources = files('''
     app-init.c
