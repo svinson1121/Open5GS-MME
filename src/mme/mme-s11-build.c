@@ -171,11 +171,15 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
     bool resolved_dns = false;
     char ipv4[INET_ADDRSTRLEN] = "";
     ResolverContext context = {};
-    char *config_mcc = (char*)"738";
-    char *config_mnc = (char*)"000";
-    char imsi_mcc[MAX_MCC_MNC_STR] = "";
-    char imsi_mnc_2[MAX_MCC_MNC_STR] = "";
-    char imsi_mnc_3[MAX_MCC_MNC_STR] = "";
+    char mme_mcc[MAX_MCC_MNC_STR] = "";
+    char mme_mnc[MAX_MCC_MNC_STR] = "";
+    char imsi_mcc[MAX_MCC_MNC_STR] = "000";
+    char imsi_mnc_2[MAX_MCC_MNC_STR] = "000";
+    char imsi_mnc_3[MAX_MCC_MNC_STR] = "000";
+    
+    /* Load MCC and MNC from config and format them */
+    snprintf(mme_mcc, MAX_MCC_MNC_STR, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
+    snprintf(mme_mnc, MAX_MCC_MNC_STR, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
 
     strncpy(context.apn, sess->session->name, DNS_RESOLVERS_MAX_APN_STR);
     strncpy(context.target, "pgw", DNS_RESOLVERS_MAX_TARGET_STR);
@@ -183,24 +187,18 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
     /* Load our MCC and MNC from the config */
     strncpy(context.domain_suffix, "3gppnetwork.org", DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR);
 
-
-    memset(imsi_mcc, 0, MAX_MCC_MNC_STR);
-    memset(imsi_mnc_2, 0, MAX_MCC_MNC_STR);
-    memset(imsi_mnc_3, 0, MAX_MCC_MNC_STR);
-    
     memcpy(imsi_mcc, &mme_ue->imsi_bcd[0], 3);
-    memcpy(imsi_mnc_2, &mme_ue->imsi_bcd[3], 2);
+    memcpy(&imsi_mnc_2[1], &mme_ue->imsi_bcd[3], 2);
     memcpy(imsi_mnc_3, &mme_ue->imsi_bcd[3], 3);
 
     strncpy(context.mcc, imsi_mcc, DNS_RESOLVERS_MAX_MCC_STR);
 
-
     /* Check that our  */
-    if ((0 == strcmp(imsi_mcc, config_mcc) &&
-        (0 == strncmp(imsi_mnc_3, config_mnc, strlen(config_mnc))))) {
+    if ((0 == strcmp(imsi_mcc, mme_mcc) &&
+        (0 == strncmp(imsi_mnc_3, mme_mnc, strlen(mme_mnc))))) {
         /* Might be home, check home */
         strncpy(context.interface, "s5", DNS_RESOLVERS_MAX_INTERFACE_STR);
-        strncpy(context.mnc, config_mnc, DNS_RESOLVERS_MAX_MNC_STR);
+        strncpy(context.mnc, mme_mnc, DNS_RESOLVERS_MAX_MNC_STR);
         
         printf("Attempting NAPTR resolv for home [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
         resolved_dns = resolve_naptr(&context, ipv4, INET_ADDRSTRLEN);
