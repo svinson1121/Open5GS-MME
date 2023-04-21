@@ -167,11 +167,6 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
 
     /* ******************************** WIP ******************************** */
 
-
-// todo If it's PGW:
-// todo If the sub is a locally served sub (MNC / MCC ==ours ) it's S5
-// todo If hte sub is a roamer MNC/MCC of sub != ours then it's S8
-
     enum { MAX_MCC_MNC_STR = 4 };
     bool resolved_dns = false;
     char ipv4[INET_ADDRSTRLEN] = "";
@@ -186,8 +181,6 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
     strncpy(context.target, "pgw", DNS_RESOLVERS_MAX_TARGET_STR);
     strncpy(context.protocol, "gtp", DNS_RESOLVERS_MAX_PROTOCOL_STR);
     /* Load our MCC and MNC from the config */
-    // strncpy(context.mcc, "738", DNS_RESOLVERS_MAX_MCC_STR);
-    // strncpy(context.mnc, "000", DNS_RESOLVERS_MAX_MNC_STR);
     strncpy(context.domain_suffix, "3gppnetwork.org", DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR);
 
 
@@ -205,29 +198,12 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
     /* Check that our  */
     if ((0 == strcmp(imsi_mcc, config_mcc) &&
         (0 == strncmp(imsi_mnc_3, config_mnc, strlen(config_mnc))))) {
-        
         /* Might be home, check home */
         strncpy(context.interface, "s5", DNS_RESOLVERS_MAX_INTERFACE_STR);
         strncpy(context.mnc, config_mnc, DNS_RESOLVERS_MAX_MNC_STR);
-
+        
         printf("Attempting NAPTR resolv for home [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
-        if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
-            /* We resolved for home */
-            resolved_dns = true;
-        } else if (2 == strlen(config_mnc)) {
-            /* It wasn't home but it is very similar because we matched 
-             * with the IMSI... Must be a roaming that looks very similar
-             * to our home but it has an additional 3rd digit on the MNC */
-            strncpy(context.interface, "s8", DNS_RESOLVERS_MAX_INTERFACE_STR);
-            strcpy(context.mnc, imsi_mnc_3);
-            context.mnc[4] = '\0';
-
-            printf("Attempting NAPTR resolv for roming [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
-            resolved_dns = resolve_naptr(&context, ipv4, INET_ADDRSTRLEN);
-        } else {
-            /* Failed to resolve */
-            resolved_dns = false;
-        }
+        resolved_dns = resolve_naptr(&context, ipv4, INET_ADDRSTRLEN);
     }
     else {
         /* This is roaming, check roaming with a 3 digit MNC */
@@ -254,36 +230,6 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
         ogs_ipv4_from_string(&addr, ipv4);
         pgw_s5c_teid.addr = addr;
     }
-
-    /* 
-    if maybe home
-        check home
-        if home fails and mnc is only 3 chars then check home with the extra mnc char
-    else 
-        check roam sz 2
-        check rome sz 3
-    */
-
-
-
-
-
-
-    // strncpy(context.apn,           "mms", 32);
-    // strncpy(context.mnc,           "030", 8);
-    // strncpy(context.mcc,           "362", 8);
-    // strncpy(context.domain_suffix, "3gppnetwork.org", 64);
-    // strncpy(context.target,        "pgw", 8);
-    // strncpy(context.interface,     "s5", 8);
-    // strncpy(context.protocol,      "gtp", 8);
-
-    if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
-        /* Clobber the PGW addr if we resolved another */
-    }
-    else {
-        ogs_warn("NAPTR resolution failed, leaving PGW IP unchanged");
-    }
-
 
     /* ******************************** WIP ******************************** */
 
