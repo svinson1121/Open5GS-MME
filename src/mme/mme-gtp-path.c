@@ -231,156 +231,26 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
         return OGS_ERROR;
     }
 
+    if (mme_self()->dns_target_sgw) {
+        char ipv4[INET_ADDRSTRLEN] = "";
+        ResolverContext context = {};
+        /* We do not include the APN for SGW lookups */
+        snprintf(context.mnc, DNS_RESOLVERS_MAX_MNC_STR, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
+        snprintf(context.mcc, DNS_RESOLVERS_MAX_MCC_STR, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
+        strncpy(context.target, "sgw", DNS_RESOLVERS_MAX_TARGET_STR);
+        strncpy(context.interface, "s11", DNS_RESOLVERS_MAX_INTERFACE_STR);
+        strncpy(context.protocol, "gtp", DNS_RESOLVERS_MAX_PROTOCOL_STR);
+        strncpy(context.domain_suffix, mme_self()->dns_base_domain, DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // ogs_sockaddr_t * addr = ogs_list_last(sgw_ue->gnode->sa_list);
-    // ogs_addaddrinfo(&addr, AF_INET, "22.22.22.22", 4000, 0);
-
-    
-
-    // char buf[66];
-    // printf("[!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1] Create  peer [%s]:%d\n",
-    //         OGS_ADDR(addr, buf),
-    //         OGS_PORT(&sgw_ue->gnode->addr));
-
-
-// we need to find how the address is put into the gnode
-
-
-    /* The gnode stores (all?) the address the mme sends the CSR to.
-     * We want to change that address to our own address.
-     * xact refers to the sgw_ue->gnode, the same gnode with the send socket information.
-     * The xact is later used to get the gnode->addr.sa for sending 
-     * When we loaded the config there were multiple addr that were stored? */
-
-    // printf("sgw_ue->gnode->addr.sa.sa_data: '%s'\n", sgw_ue->gnode->addr.sa.sa_data);
-    // for (int r = 0; r < 14; ++r) {
-    //     printf("%02x ", sgw_ue->gnode->addr.sa.sa_data[r]);
-    // }
-    // printf("\n");
-
-
-    // ogs_sockaddr_t *addr = sgw_ue->gnode->sa_list;
-    // // we could totally create a new addr then set it like the memcpy below
-    // // memcpy(&sgw_ue->gnode->addr, addr->next, sizeof(sgw_ue->gnode->addr));
-    // while(NULL != addr) {
-    //     printf("addr->hostname: '%s'\n", ogs_ipv4_to_string(*((uint32_t*)&addr->sa.sa_data[2])));
-    //     addr = addr->next;
-    // }
-
-
-    // /* maybe add this to the if-else tree above */
-    // enum { IPV4_STR_SZ = 16 };
-    // char ipv4[IPV4_STR_SZ] = "";
-    // ResolverContext context = {};
-
-    // /* TODO function to populate the context? */
-    // strcpy(context.target, "pgw");
-    // strcpy(context.interface, "s5");
-    // strcpy(context.protocol, "gtp");
-    // strcpy(context.apn, sess->session->name);
-    // sprintf(context.mcc, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
-    // sprintf(context.mnc, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
-    // strcpy(context.domain_suffix, ".3gppnetwork.org.nickvsnetworking.com");
-
-    // printf("Context:\n"
-    //     "\ttarget        : '%s'\n"
-    //     "\tinterface     : '%s'\n"
-    //     "\tprotocol      : '%s'\n"
-    //     "\tapn           : '%s'\n"
-    //     "\tmcc           : '%s'\n"
-    //     "\tmnc           : '%s'\n"
-    //     "\tdomain_suffix : '%s'\n",
-    //     context.target,
-    //     context.interface,
-    //     context.protocol,
-    //     context.apn,
-    //     context.mcc,
-    //     context.mnc,
-    //     context.domain_suffix
-    // );
-
-    /* Clobber the SGW addr */
-    // Resolve_APN(&context, ipv4); // only needs to return 1 ip, the one with the highest priotity, if not there is some magic to rng the dns weight and priority
-    // ogs_ipv4_from_string((uint32_t*)&sgw_ue->gnode->addr.sa.sa_data[2], ipv4);
-
-
-
-    /* ******************************** WIP ******************************** */
-
-    char ipv4[INET_ADDRSTRLEN] = "";
-    ResolverContext context = {};
-    // strncpy(context.apn, sess->session->name, DNS_RESOLVERS_MAX_APN_STR);
-    snprintf(context.mnc, DNS_RESOLVERS_MAX_MNC_STR, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
-    snprintf(context.mcc, DNS_RESOLVERS_MAX_MCC_STR, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
-    strncpy(context.target, "sgw", DNS_RESOLVERS_MAX_TARGET_STR);
-    strncpy(context.interface, "s11", DNS_RESOLVERS_MAX_INTERFACE_STR);
-    strncpy(context.protocol, "gtp", DNS_RESOLVERS_MAX_PROTOCOL_STR);
-    strncpy(context.domain_suffix, "3gppnetwork.org", DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR);
-
-
-    // strncpy(context.apn,           "mms", 32);
-    // strncpy(context.mnc,           "030", 8);
-    // strncpy(context.mcc,           "362", 8);
-    // strncpy(context.domain_suffix, "3gppnetwork.org", 64);
-    // strncpy(context.target,        "pgw", 8);
-    // strncpy(context.interface,     "s5", 8);
-    // strncpy(context.protocol,      "gtp", 8);
-
-    if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
-        /* Clobber the PGW addr if we resolved another */
-        ogs_info("Successfully clobbered the SGW IP in CSR");
-        ogs_ipv4_from_string((uint32_t*)&sgw_ue->gnode->addr.sa.sa_data[2], ipv4);
+        if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
+            /* Clobber the SGW addr if we resolved */
+            ogs_info("Successfully clobbered the SGW IP in CSR");
+            ogs_ipv4_from_string((uint32_t*)&sgw_ue->gnode->addr.sa.sa_data[2], ipv4);
+        }
+        else {
+            ogs_warn("Failed to resolve dns and update SGW IP in CSR");
+        }
     }
-    else {
-        ogs_warn("NAPTR resolution failed, leaving SGW IP unchanged");
-    }
-    
-    /* ******************************** WIP ******************************** */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
 
     xact = ogs_gtp_xact_local_create(sgw_ue->gnode, &h, pkbuf, timeout, sess);
     if (!xact) {
