@@ -1607,25 +1607,21 @@ int mme_context_parse_config(void)
                         if (strcmp(dns_key, "dns_target_sgw") == 0) {
                             if (!strcmp("True", dns_value) || 
                                 !strcmp("true", dns_value)) {
-                                ogs_info("Emergency bearer services have been enabled");
+                                ogs_info("SGW DNS lookups");
                                 self.dns_target_sgw = true;
                             }
                         } else if (strcmp(dns_key, "dns_target_pgw") == 0) {
                             if (!strcmp("True", dns_value) || 
                                 !strcmp("true", dns_value)) {
-                                ogs_info("Emergency bearer services have been enabled");
-                                self.dns_target_sgw = true;
+                                ogs_info("PGW DNS lookups");
+                                self.dns_target_pgw = true;
                             }
                         } else if (strcmp(dns_key, "base_domain") == 0) {
-                            strncpy(self.dns_base_domain, dns_key, MAX_DNS_BASE_DOMAIN_NAME);
+                            strncpy(self.dns_base_domain, dns_value, MAX_DNS_BASE_DOMAIN_NAME);
                         } else {
                             ogs_warn("unknown key `%s`", dns_key);
                         }
                     }
-
-                    printf("dns_target_sgw : %s\n", self.dns_target_sgw ? "true" : false);
-                    printf("dns_target_pgw : %s\n", self.dns_target_pgw ? "true" : false);
-                    printf("dns_base_domain : %s\n", self.dns_base_domain);
                 } else
                     ogs_warn("unknown key `%s`", mme_key);
             }
