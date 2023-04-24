@@ -54,6 +54,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-
-// mms.apn.epc.mnc030.mcc362.3gppnetwork.org
-// mms.apn.epc.mnc030.mcc362.3gppnetwork.org

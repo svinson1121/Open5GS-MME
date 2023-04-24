@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2023 by Ryan Dimsey <ryan@omnitouch.com.au>
+ *
+ * This file is part of Open5GS.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 #include <ctype.h>
 #include <string.h>
 #include "regex_extensions.h"
@@ -20,6 +38,8 @@ bool reg_match(char const *pattern, char const *string) {
 	return has_match;
 }
 
+/* See https://github.com/kamailio/kamailio/blob/master/src/core/strutils.c
+ * for original implementation */
 int reg_replace(char *pattern, char *replacement, char *string, char *buf, size_t buf_sz)
 {
 	regmatch_t pmatch[SR_RE_MAX_MATCH];
@@ -38,9 +58,10 @@ int reg_replace(char *pattern, char *replacement, char *string, char *buf, size_
 	return replace(&pmatch[0], string, replacement, buf, buf_sz);
 }
 
-/*! \brief Replace in replacement tokens \\d with substrings of string pointed by
+/* Replace in replacement tokens \\d with substrings of string pointed by
  * pmatch.
- */
+ * See https://github.com/kamailio/kamailio/blob/master/src/core/strutils.c
+ * for original implementation. */
 static int replace(regmatch_t* pmatch, char* string, char* replacement, char* buf, size_t buf_sz)
 {
 	int len;
@@ -96,6 +117,8 @@ static int replace(regmatch_t* pmatch, char* string, char* replacement, char* bu
 	return 1;
 }
 
+/* See https://github.com/kamailio/kamailio/blob/master/src/core/strutils.c
+ * for original implementation of reg_match */
 static int get_reg_match(char const *pattern, char const *string, regmatch_t *pmatch)
 {
 	regex_t preg;

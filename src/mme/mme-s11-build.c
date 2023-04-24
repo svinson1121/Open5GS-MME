@@ -177,11 +177,10 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
         /* Load MCC and MNC from config and format them */
         snprintf(mme_mcc, MAX_MCC_MNC_STR, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
         snprintf(mme_mnc, MAX_MCC_MNC_STR, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
-
         strncpy(context.apn, sess->session->name, DNS_RESOLVERS_MAX_APN_STR);
         strncpy(context.target, "pgw", DNS_RESOLVERS_MAX_TARGET_STR);
         strncpy(context.protocol, "gtp", DNS_RESOLVERS_MAX_PROTOCOL_STR);
-        /* Load our MCC and MNC from the config */
+        /* Load our domain suffix from the config */
         strncpy(context.domain_suffix, mme_self()->dns_base_domain, DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR);
 
         memcpy(imsi_mcc, &mme_ue->imsi_bcd[0], 3);

@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 libdnsresolvers_sources = files('''
-    ogs-dns_resolvers.h
     dns_resolvers.h
     naptr.h
     regex_extensions.h

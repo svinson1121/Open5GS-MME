@@ -1600,7 +1600,7 @@ int mme_context_parse_config(void)
                     ogs_yaml_iter_t dns_iter;
                     ogs_yaml_iter_recurse(&mme_iter, &dns_iter);
 
-                    /* Going through 'emergency_number_list' children */
+                    /* Going through keys and values in dns section */
                     while (ogs_yaml_iter_next(&dns_iter)) {
                         const char *dns_key = ogs_yaml_iter_key(&dns_iter);
                         const char *dns_value = ogs_yaml_iter_value(&dns_iter);

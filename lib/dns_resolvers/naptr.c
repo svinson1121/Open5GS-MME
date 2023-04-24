@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2023 by Ryan Dimsey <ryan@omnitouch.com.au>
+ *
+ * This file is part of Open5GS.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 #include "naptr.h"
 #include <arpa/inet.h>
 #include <resolv.h>
@@ -22,7 +40,6 @@ static void get_regex_pattern_replace(char * const regex_str, char * const regex
 static inline int naptr_greater(naptr_resource_record *na, naptr_resource_record *nb);
 static void _naptr_free_resource_record_list(naptr_resource_record * head);
 
-/* If dname is NULL then we will return NULL */
 naptr_resource_record * naptr_query(const char* dname) {
     int count;
     int bytes_received;
@@ -162,7 +179,7 @@ int naptr_resource_record_list_count(naptr_resource_record * nrr) {
     return count;
 }
 
-/* Returns the head of a doubly linked list */
+/* Returns the head of the doubly linked list */
 static naptr_resource_record * parse_naptr_resource_records(ns_msg * const handle, int count) {
     ns_rr rr;
     int i = 0;
@@ -260,7 +277,7 @@ static bool parse_naptr_resource_record(const unsigned char * buf, uint16_t buf_
     return success;
 }
 
-/* This will mutate regex_str */
+/* Note: This will mutate regex_str */
 static void get_regex_pattern_replace(char * const regex_str, char * const regex_pattern, size_t max_regex_pattern_sz, char * const regex_replace, size_t max_regex_replace_sz) {
     if ((NULL == regex_str)     ||
         (NULL == regex_pattern) ||

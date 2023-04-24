@@ -1,3 +1,22 @@
+/*
+ * Copyright (C) 2023 by Ryan Dimsey <ryan@omnitouch.com.au>
+ *
+ * This file is part of Open5GS.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -20,7 +39,6 @@ static int type_ip_query(char lookup_type, char * dname, char * buf, size_t buf_
 static void debug_print_nrr(naptr_resource_record *nrr);
 
 
-/* Takes in a context and returns an ip? */
 bool resolve_naptr(ResolverContext * const context, char *buf, size_t buf_sz) {
     bool resolved = false;
     naptr_resource_record *nrr = NULL;
@@ -156,7 +174,6 @@ static bool has_appropriate_services(ResolverContext const * const context, napt
     return has_appropriate_services;
 }
 
-/* We want this  */
 static bool has_replace_has_no_regex(ResolverContext const * const context, naptr_resource_record *nrr) {
     bool has_replace_has_no_regex = false;
 
@@ -178,7 +195,6 @@ static bool has_replace_has_no_regex(ResolverContext const * const context, napt
 
     return has_replace_has_no_regex;
 }
-
 
 static bool has_regex_match(ResolverContext const * const context, naptr_resource_record *nrr) {
     bool has_regex_match = false;
@@ -210,8 +226,7 @@ static bool has_regex_match(ResolverContext const * const context, naptr_resourc
  *     - Known flag
  *     - Appropriate services
  *     - It has a replacement field AND no regex field
- *     - It has a regex field that does not match the string
- * 
+ *     - It has a regex field that matches the domain name
  */
 static bool should_remove(ResolverContext const * const context, naptr_resource_record *nrr) {
     bool should_remove = false;
@@ -290,18 +305,12 @@ static void transform_domain_name(naptr_resource_record *nrr, char * dname) {
     }
 }
 
-/* TODO this should be changed and moved to a more appropriate area. 
- * It should return a query result and not a single IP.
- * It should also be renamed to a_query or srv_query 
- * 
- * E.g.
-    bool resolve_srv(ResolverContext * const context, char *buf, size_t buf_sz) {
-    bool resolve_a(ResolverContext * const context, char *buf, size_t buf_sz) {
- * 
- * */
 static int type_ip_query(char lookup_type, char * dname, char * buf, size_t buf_sz) {
     int ip_count = 0;
     int resolv_lookup_type; 
+    int bytes_received;
+    int i;
+    int res;
     unsigned char answer[MAX_ANSWER_BYTES];
     ns_rr record;
     ns_msg handle;
@@ -310,7 +319,6 @@ static int type_ip_query(char lookup_type, char * dname, char * buf, size_t buf_
 
     if (('a' == lookup_type) || (0 == lookup_type)) {
         resolv_lookup_type = T_A; 
-        // return 0; // temp, remove me after building SRV stuff
     } else if ('s' == lookup_type) {
         resolv_lookup_type = T_SRV; 
     } else {
@@ -318,18 +326,17 @@ static int type_ip_query(char lookup_type, char * dname, char * buf, size_t buf_
         return 0;
     }
 
-    int bytes_received, i, result;
 
-    // Send DNS query for A record type
+    /* Send DNS query for lookup type */
     bytes_received = res_query(dname, C_IN, resolv_lookup_type, answer, MAX_ANSWER_BYTES);
     ogs_debug("[%c-lookup] Query for '%s' resulted in %i bytes received", lookup_type, dname, bytes_received);
     if (bytes_received < 0) {
         return 0;
     }
 
-    // Initialize message handle
-    result = ns_initparse(answer, bytes_received, &handle);
-    if (result < 0) {
+    /* Initialize message handle */
+    res = ns_initparse(answer, bytes_received, &handle);
+    if (res < 0) {
         ogs_error("Failed to parse query result");
         return 0;
     }
@@ -338,8 +345,8 @@ static int type_ip_query(char lookup_type, char * dname, char * buf, size_t buf_
      * The last valid one is the one that is
      * returned via buf */
     for (i = 0; i < ns_msg_count(handle, ns_s_an); i++) {
-        result = ns_parserr(&handle, ns_s_an, i, &record);
-        if (result < 0) {
+        res = ns_parserr(&handle, ns_s_an, i, &record);
+        if (res < 0) {
             ogs_error("Failed to parse query result");
             return 0;
         }
