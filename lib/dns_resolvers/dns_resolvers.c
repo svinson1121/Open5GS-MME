@@ -322,7 +322,7 @@ static int type_ip_query(char lookup_type, char * dname, char * buf, size_t buf_
     } else if ('s' == lookup_type) {
         resolv_lookup_type = T_SRV; 
     } else {
-        ogs_error("Unsupported lookup type '%c'", lookup_type);
+        ogs_error("Unsupported lookup type '%c', onlt support 'a' and 's' types", lookup_type);
         return 0;
     }
 
@@ -344,6 +344,7 @@ static int type_ip_query(char lookup_type, char * dname, char * buf, size_t buf_
     /* Resolve and return A and SRV records.
      * The last valid one is the one that is
      * returned via buf */
+    ogs_debug("[%c-lookup] Looping through %i results to resolve IP", lookup_type, ns_msg_count(handle, ns_s_an));
     for (i = 0; i < ns_msg_count(handle, ns_s_an); i++) {
         res = ns_parserr(&handle, ns_s_an, i, &record);
         if (res < 0) {
