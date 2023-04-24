@@ -1593,6 +1593,39 @@ int mme_context_parse_config(void)
                                 self.redis_config.expire_time_sec = atoi(redis_expire_time_sec);
                         }
                     }
+                } else if (!strcmp(mme_key, "dns")) {
+                    ogs_yaml_iter_t dns_iter;
+                    ogs_yaml_iter_recurse(&mme_iter, &dns_iter);
+
+                    /* Going through 'emergency_number_list' children */
+                    while (ogs_yaml_iter_next(&dns_iter)) {
+                        const char *dns_key = ogs_yaml_iter_key(&dns_iter);
+                        const char *dns_value = ogs_yaml_iter_value(&dns_iter);
+                        ogs_assert(dns_key);
+                        ogs_assert(dns_value);
+
+                        if (strcmp(dns_key, "dns_target_sgw") == 0) {
+                            if (!strcmp("True", dns_value) || 
+                                !strcmp("true", dns_value)) {
+                                ogs_info("Emergency bearer services have been enabled");
+                                self.dns_target_sgw = true;
+                            }
+                        } else if (strcmp(dns_key, "dns_target_pgw") == 0) {
+                            if (!strcmp("True", dns_value) || 
+                                !strcmp("true", dns_value)) {
+                                ogs_info("Emergency bearer services have been enabled");
+                                self.dns_target_sgw = true;
+                            }
+                        } else if (strcmp(dns_key, "base_domain") == 0) {
+                            strncpy(self.dns_base_domain, dns_key, MAX_DNS_BASE_DOMAIN_NAME);
+                        } else {
+                            ogs_warn("unknown key `%s`", dns_key);
+                        }
+                    }
+
+                    printf("dns_target_sgw : %s\n", self.dns_target_sgw ? "true" : false);
+                    printf("dns_target_pgw : %s\n", self.dns_target_pgw ? "true" : false);
+                    printf("dns_base_domain : %s\n", self.dns_base_domain);
                 } else
                     ogs_warn("unknown key `%s`", mme_key);
             }

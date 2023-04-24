@@ -77,7 +77,8 @@ typedef struct served_gummei_s {
 } served_gummei_t;
 
 enum { BYTES_IN_EMERGENCY_NUMBER_LIST_ITEM = 4,
-       MAX_NUM_EMERGENCY_NUMBER_LIST_ITEMS = OGS_NAS_MAX_EMERGENCY_NUMBER_LIST_LEN / BYTES_IN_EMERGENCY_NUMBER_LIST_ITEM };
+       MAX_NUM_EMERGENCY_NUMBER_LIST_ITEMS = OGS_NAS_MAX_EMERGENCY_NUMBER_LIST_LEN / BYTES_IN_EMERGENCY_NUMBER_LIST_ITEM,
+       MAX_DNS_BASE_DOMAIN_NAME = 64 };
 typedef struct {
     bool service_mountain_rescue;
     bool service_marine_guard;
@@ -188,6 +189,12 @@ typedef struct mme_context_s {
     bool emergency_bearer_services;
     size_t num_emergency_number_list_items;
     emergency_number_list_item_t emergency_number_list[MAX_NUM_EMERGENCY_NUMBER_LIST_ITEMS];
+
+    /* DNS */
+    bool dns_target_sgw;
+    bool dns_target_pgw;
+    char dns_base_domain[MAX_DNS_BASE_DOMAIN_NAME];
+
 } mme_context_t;
 
 typedef struct mme_sgw_s {
