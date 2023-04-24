@@ -7,7 +7,7 @@
 #include "naptr.h"
 #include "regex_extensions.h"
 #include "dns_resolvers.h"
-
+#include "ogs-dns-resolvers-logging.h"
 
 enum { MAX_ANSWER_BYTES = 1024 };
 
@@ -15,34 +15,10 @@ enum { MAX_ANSWER_BYTES = 1024 };
 static bool build_domain_name(ResolverContext * const context);
 static naptr_resource_record * filter_nrrs(ResolverContext const * const context, naptr_resource_record *nrrs);
 static bool should_remove(ResolverContext const * const context, naptr_resource_record *nrr);
-static naptr_resource_record * get_best_nrr(naptr_resource_record *nrrs);
 static void transform_domain_name(naptr_resource_record *nrr, char * dname);
 static int type_ip_query(char lookup_type, char * dname, char * buf, size_t buf_sz);
+static void debug_print_nrr(naptr_resource_record *nrr);
 
-
-// todo remove
-static void print_nrr(naptr_resource_record *nrr) {
-    printf("nrr->preference    : %i\n",   nrr->preference);
-    printf("nrr->order         : %i\n",   nrr->order);
-    printf("nrr->flag          : '%c'\n", nrr->flag);
-    printf("nrr->service       : '%s'\n", nrr->service);
-    printf("nrr->regex_pattern : '%s'\n", nrr->regex_pattern);
-    printf("nrr->regex_replace : '%s'\n", nrr->regex_replace);
-    printf("nrr->replacement   : '%s'\n", nrr->replacement);
-}
-
-// todo remove
-static void print_nrrs(naptr_resource_record *nrrs) {
-    int i = 0;
-
-    while (NULL != nrrs) {
-        printf("\nResult %i:\n", i);
-        print_nrr(nrrs);
-
-        ++i;
-        nrrs = nrrs->next;
-    }
-}
 
 /* Takes in a context and returns an ip? */
 bool resolve_naptr(ResolverContext * const context, char *buf, size_t buf_sz) {
@@ -54,32 +30,30 @@ bool resolve_naptr(ResolverContext * const context, char *buf, size_t buf_sz) {
 
     /* Build domain name */
     build_domain_name(context);
+    ogs_debug("Built domain name : '%s'", context->_domain_name);
 
     /* Get all NRRs */
     nrr_list = naptr_query(context->_domain_name);
     if (NULL == nrr_list) return false;
+    ogs_debug("NAPTR query returned %i results", naptr_resource_record_list_count(nrr_list));
 
     /* Remove all the NRRs that don't provide the desired service */
-    printf("before filter_nrrs` %i\n", naptr_resource_record_list_count(nrr_list));
     nrr_list = filter_nrrs(context, nrr_list);
+    ogs_debug("NAPTR list count after filter %i", naptr_resource_record_list_count(nrr_list));
 
     /* Sort the NRRs so that we can resolve them in order of priority */
-    printf("before naptr_list_head %i\n", naptr_resource_record_list_count(nrr_list));
     nrr_list = naptr_list_head(nrr_list);
-    printf("before sort count %i\n", naptr_resource_record_list_count(nrr_list));
     nrr = naptr_sort(&nrr_list);
-    printf("after sort count %i\n", naptr_resource_record_list_count(nrr));
-
 
     while (nrr != NULL) {
         /* Update domain name */
         transform_domain_name(nrr, context->_domain_name);
 
-        printf("Doing '%c' lookup for '%s'\n", nrr->flag, context->_domain_name);
         /* Go through the NRRs until we get an IP */
         int num_ips = type_ip_query(nrr->flag, context->_domain_name, buf, buf_sz);
 
         if (0 < num_ips) {
+            ogs_debug("Resolve successful, IP is '%s'", buf);
             resolved = true;
             break;
         }
@@ -104,7 +78,6 @@ static bool build_domain_name(ResolverContext * const context) {
             context->_domain_name,
             DNS_RESOLVERS_MAX_DOMAIN_NAME_STR,
             "epc.mnc%s.mcc%s.%s", 
-            // context->target,
             context->mnc,
             context->mcc,
             context->domain_suffix
@@ -156,8 +129,6 @@ static naptr_resource_record * filter_nrrs(ResolverContext const * const context
     return prev;
 }
 
-
-
 static bool has_appropriate_services(ResolverContext const * const context, naptr_resource_record *nrr) {
     bool has_appropriate_services = false;
     enum { DESIRED_STR_LEN = 128 };
@@ -170,8 +141,12 @@ static bool has_appropriate_services(ResolverContext const * const context, napt
     snprintf(desired_target_string, DESIRED_STR_LEN, "x-3gpp-%s", context->target);
     snprintf(desired_service_string, DESIRED_STR_LEN, "x-%s-%s", context->interface, context->protocol);
 
-    printf("desired_service_string '%s'\n", desired_service_string);
-    printf("desired_target_string '%s'\n", desired_target_string);
+    ogs_debug("Testing for appropriate service");
+    ogs_debug("Interface string       : '%s'", context->interface);
+    ogs_debug("Protocol string        : '%s'", context->protocol);
+    ogs_debug("Desired service string : '%s'", desired_service_string);
+    ogs_debug("Desired target string  : '%s'", desired_target_string);
+    ogs_debug("Actual target string   : '%s'", context->target);
 
     if ((NULL != strstr(nrr->service, desired_service_string)) &&
         (NULL != strstr(nrr->service, desired_target_string))) {
@@ -187,20 +162,17 @@ static bool has_replace_has_no_regex(ResolverContext const * const context, napt
 
     if ((NULL == context) || (NULL == nrr)) return NULL;
 
-
-    printf("replacement field is '%s'\n", nrr->replacement);
-    printf("pattern field is '%s'\n", nrr->regex_pattern);
+    ogs_debug("Replacement field is : '%s'\n", nrr->replacement);
+    ogs_debug("Pattern field is     : '%s'\n", nrr->regex_pattern);
 
     /* Has replacement field */
     if ((0 < strlen(nrr->replacement)) &&
         (0 != strcmp(nrr->replacement, "."))) {
-            printf("This one has a replacement field\n");
 
         /* Has no regex fields */
         if ((0 == strlen(nrr->regex_pattern)) &&
             (0 == strlen(nrr->regex_pattern))) {
             has_replace_has_no_regex = true;     
-            printf("Also has no regex field!\n");
         }
     }
 
@@ -213,15 +185,8 @@ static bool has_regex_match(ResolverContext const * const context, naptr_resourc
 
     if ((NULL == context) || (NULL == nrr)) return NULL;
 
-
-
     if (false == reg_match(nrr->regex_pattern, context->_domain_name)) {
         has_regex_match = true;
-        printf("has a regex match!\n");
-    }
-    else 
-    {
-        printf("regex failed to match!\n");
     }
 
     return has_regex_match;
@@ -253,37 +218,26 @@ static bool should_remove(ResolverContext const * const context, naptr_resource_
 
     if ((NULL == context) || (NULL == nrr)) return true;
 
-    printf("Testing if we should reject:\n");
-    printf("Target '%s'\n", context->target);
-    printf("APN '%s'\n", context->apn);
-    printf("interface '%s'\n", context->interface);
-    printf("domain_suffix '%s'\n", context->domain_suffix);
-    printf("mcc '%s'\n", context->mcc);
-    printf("mnc '%s'\n", context->mnc);
-    printf("protocol '%s'\n", context->protocol);
-    print_nrr(nrr);
-
-
     if (false == has_appropriate_services(context, nrr)) {
-        /* Excluding this peer due to not handling desired services */
-        printf("Excluding this peer due to not handling desired services\n");
+        ogs_debug("Excluding this peer due to not handling desired services");
         should_remove = true;
     }
     
     else if (true == has_replace_has_no_regex(context, nrr)) {
-        /* It has a replacement field AND no regex field */
-        /* OR it has a regex field that matches the domain name */
+        ogs_debug("Peer is valid as it has a replacement field AND no regex field");
         should_remove = false;
     } else if (true == has_regex_match(context, nrr)) {
+        ogs_debug("Peer is valid as it has a regex field that matches the domain name");
         should_remove = false;
     } else {
-        /* This peer provides requested target node & service */
-        printf("Excluding this peer as it has a replacement field AND no regex field\n");
+        ogs_debug("Excluding this peer as it has a replacement field AND a regex field OR a regex field that doesn't match");
         should_remove = true;
     }
-    printf("should_remove: %i\n", should_remove);
-    printf("\n\n\n");
 
+    if (should_remove) {
+        ogs_debug("Filtering following NAPTR record:");
+        debug_print_nrr(nrr);
+    }
 
     return should_remove;
 }
@@ -327,7 +281,7 @@ static void transform_domain_name(naptr_resource_record *nrr, char * dname) {
         if (1 == reg_replace_res) {
             strncpy(dname, temp, DNS_RESOLVERS_MAX_DOMAIN_NAME_STR - 1);
         } else {
-            printf("Failed to preform regex replace!\n");
+            ogs_error("Failed to preform regex replace!");
         }
     } else if (0 != strcmp(nrr->replacement, ".")) {
         strncpy(dname, nrr->replacement, DNS_RESOLVERS_MAX_DOMAIN_NAME_STR - 1);
@@ -360,7 +314,7 @@ static int type_ip_query(char lookup_type, char * dname, char * buf, size_t buf_
     } else if ('s' == lookup_type) {
         resolv_lookup_type = T_SRV; 
     } else {
-        printf("Unsupported lookup type");
+        ogs_error("Unsupported lookup type '%c'", lookup_type);
         return 0;
     }
 
@@ -368,7 +322,7 @@ static int type_ip_query(char lookup_type, char * dname, char * buf, size_t buf_
 
     // Send DNS query for A record type
     bytes_received = res_query(dname, C_IN, resolv_lookup_type, answer, MAX_ANSWER_BYTES);
-    printf("[%c-lookup] Query for '%s' resulted in %i bytes received\n", lookup_type, dname, bytes_received);
+    ogs_debug("[%c-lookup] Query for '%s' resulted in %i bytes received", lookup_type, dname, bytes_received);
     if (bytes_received < 0) {
         return 0;
     }
@@ -376,27 +330,59 @@ static int type_ip_query(char lookup_type, char * dname, char * buf, size_t buf_
     // Initialize message handle
     result = ns_initparse(answer, bytes_received, &handle);
     if (result < 0) {
-        perror("ns_initparse");
+        ogs_error("Failed to parse query result");
         return 0;
     }
 
-    // Extract and print A records
+    /* Resolve and return A and SRV records.
+     * The last valid one is the one that is
+     * returned via buf */
     for (i = 0; i < ns_msg_count(handle, ns_s_an); i++) {
         result = ns_parserr(&handle, ns_s_an, i, &record);
         if (result < 0) {
-            perror("ns_parserr");
+            ogs_error("Failed to parse query result");
             return 0;
         }
 
         if (ns_rr_type(record) == T_A) {
+            ogs_debug("Successful parse of A lookup result");
             inet_ntop(AF_INET, ns_rr_rdata(record), buf, buf_sz);
             ++ip_count;
         } else if (ns_rr_type(record) == T_SRV) {
-            /* TODO */
-            /* This will have weights and stuff then balance some stuff */
-            printf("SRV lookup is currently not implemented!\n");
+            ogs_debug("Successful parse of SRV lookup result");
+            /* Note: SRV is not fully implemented. 
+             * We make no effort to order and pick */
+            enum { SRV_DATA_TARGET_OFFSET = 6,
+                   MAX_TARGET_STR_UNCOMPRESSED = 64 };
+            const unsigned char *start = ns_rr_rdata(record);
+            const unsigned char *end = start + ns_rr_rdlen(record);
+            const unsigned char *target_start = ns_rr_rdata(record) + SRV_DATA_TARGET_OFFSET;
+            char target_uncompressed[MAX_TARGET_STR_UNCOMPRESSED] = "";
+
+            int bytes_uncompressed = ns_name_uncompress(
+                start,                      /* Start of compressed buffer */
+                end,                        /* End of compressed buffer */
+                target_start,               /* Where to start decompressing */
+                target_uncompressed,        /* Where to store decompressed value */
+                MAX_TARGET_STR_UNCOMPRESSED /* Number of bytes that can be stored in output buffer */
+            );
+
+            /* Preform an A query based on SRV target */
+            if (0 < bytes_uncompressed) {
+                ip_count += type_ip_query('a', target_uncompressed, buf, buf_sz);
+            }
         }
     }
 
     return ip_count;
+}
+
+static void debug_print_nrr(naptr_resource_record *nrr) {
+    ogs_debug("preference    : %i",   nrr->preference);
+    ogs_debug("order         : %i",   nrr->order);
+    ogs_debug("flag          : '%c'", nrr->flag);
+    ogs_debug("service       : '%s'", nrr->service);
+    ogs_debug("regex_pattern : '%s'", nrr->regex_pattern);
+    ogs_debug("regex_replace : '%s'", nrr->regex_replace);
+    ogs_debug("replacement   : '%s'", nrr->replacement);
 }

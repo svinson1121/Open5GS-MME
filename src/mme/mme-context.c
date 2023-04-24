@@ -27,6 +27,7 @@
 #include "s1ap-handler.h"
 #include "mme-sm.h"
 #include "mme-gtp-path.h"
+#include "dns_resolvers.h"
 
 #define MAX_CELL_PER_ENB            8
 
@@ -36,6 +37,7 @@ static ogs_diam_config_t g_diam_conf;
 int __mme_log_domain;
 int __emm_log_domain;
 int __esm_log_domain;
+int __ogs_dns_resolvers_domain;
 
 static OGS_POOL(mme_sgw_pool, mme_sgw_t);
 static OGS_POOL(mme_pgw_pool, mme_pgw_t);
@@ -81,6 +83,7 @@ void mme_context_init(void)
     ogs_log_install_domain(&__mme_log_domain, "mme", ogs_core()->log.level);
     ogs_log_install_domain(&__emm_log_domain, "emm", ogs_core()->log.level);
     ogs_log_install_domain(&__esm_log_domain, "esm", ogs_core()->log.level);
+    ogs_log_install_domain(&__ogs_dns_resolvers_domain, "dns_resolvers", ogs_core()->log.level);
 
     ogs_list_init(&self.s1ap_list);
     ogs_list_init(&self.s1ap_list6);

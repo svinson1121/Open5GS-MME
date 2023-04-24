@@ -197,7 +197,7 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
             strncpy(context.interface, "s5", DNS_RESOLVERS_MAX_INTERFACE_STR);
             strncpy(context.mnc, mme_mnc, DNS_RESOLVERS_MAX_MNC_STR);
             
-            printf("Attempting NAPTR resolv for home [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
+            ogs_debug("Attempting NAPTR resolv for home [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
             resolved_dns = resolve_naptr(&context, ipv4, INET_ADDRSTRLEN);
         }
         else {
@@ -205,7 +205,7 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
             strncpy(context.interface, "s8", DNS_RESOLVERS_MAX_INTERFACE_STR);
             strcpy(context.mnc, imsi_mnc_3);
 
-            printf("Attempting NAPTR resolv for roming [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
+            ogs_debug("Attempting NAPTR resolv for roming [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
             if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
                 /* We resolved for roming */
                 resolved_dns = true;
@@ -214,13 +214,13 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
                 * try the 2 digit MNC */
                 strcpy(context.mnc, imsi_mnc_2);
 
-                printf("Attempting NAPTR resolv for roming [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
+                ogs_debug("Attempting NAPTR resolv for roming [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
                 resolved_dns = resolve_naptr(&context, ipv4, INET_ADDRSTRLEN);
             }
         }
 
         if (resolved_dns) {
-            ogs_info("Successfully clobbered the PGW IP in CSR");
+            ogs_info("Successfully clobbered the PGW IP in CSR with '%s'", ipv4);
             uint32_t addr = 0;
             ogs_ipv4_from_string(&addr, ipv4);
             pgw_s5c_teid.addr = addr;

@@ -17,8 +17,8 @@ int main(int argc, char **argv) {
 
         printf("Running default...\n");
         strncpy(context.apn,           "mms", 32);
-        strncpy(context.mnc,           "030", 8);
-        strncpy(context.mcc,           "362", 8);
+        strncpy(context.mcc,           "738", 8);
+        strncpy(context.mnc,           "000", 8);
         strncpy(context.domain_suffix, "3gppnetwork.org", 64);
         strncpy(context.target,        "pgw", 8);
         strncpy(context.interface,     "s5", 8);

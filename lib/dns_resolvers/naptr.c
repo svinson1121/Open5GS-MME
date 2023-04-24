@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include "ogs-dns-resolvers-logging.h"
 
 
 enum { ORDER_SZ_BYTES = 2,
@@ -34,9 +35,9 @@ naptr_resource_record * naptr_query(const char* dname) {
     /* Perform NAPTR lookup */
     /* NAPTR records serialised in buffer  */
     bytes_received = res_query(dname, ns_c_in, ns_t_naptr, answer, sizeof(answer));
-    printf("[NAPTR-lookup] Query for '%s' resulted in %i bytes received\n", dname, bytes_received);
+    ogs_debug("[NAPTR-lookup] Query for '%s' resulted in %i bytes received\n", dname, bytes_received);
     if (bytes_received <= 0) {
-        printf("Query failed: '%s'\n", dname);
+        ogs_error("Query failed: '%s'", dname);
         return 0;
     }
 
@@ -49,7 +50,7 @@ naptr_resource_record * naptr_query(const char* dname) {
     nrrs = parse_naptr_resource_records(&handle, count);
 
     if (NULL == nrrs) {
-        printf("Failed to parse any answers!\n");
+        ogs_error("Failed to parse NAPTR answers!\n");
         return 0;
     }
 
@@ -176,7 +177,7 @@ static naptr_resource_record * parse_naptr_resource_records(ns_msg * const handl
             /* Make memory for new nrr */
             nrr_current = (naptr_resource_record*)malloc(sizeof(naptr_resource_record));
             if (NULL == nrr_current) {
-                printf("Critical failure... Could not allocate memory\n");
+                ogs_fatal("Critical failure... Could not allocate memory\n");
                 exit(-1);
             }
             memset(nrr_current, 0, sizeof(naptr_resource_record));

@@ -356,6 +356,10 @@ mme:
       addr: "127.0.0.1"
       port: 6379
       expire_time_sec: 3
+    dns:
+      dns_target_sgw: True
+      dns_target_pgw: True
+      base_domain: '3gppnetwork.org'
 
 #
 # <GTP-C Client>

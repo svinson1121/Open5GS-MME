@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 libdnsresolvers_sources = files('''
+    ogs-dns_resolvers.h
     dns_resolvers.h
     naptr.h
     regex_extensions.h
@@ -34,11 +35,11 @@ libdnsresolvers = static_library('dns_resolvers',
     version : libogslib_version,
     c_args : '-DOGS_S1AP_COMPILATION',
     include_directories : libdnsresolvers_inc,
-    dependencies : [libresolv_dep],
+    dependencies : [libapp_dep, libresolv_dep],
     install : true)
 
 libdnsresolvers_dep = declare_dependency(
     link_with : libdnsresolvers,
     include_directories : [libdnsresolvers_inc],
-    dependencies : libresolv_dep
+    dependencies : [libapp_dep, libresolv_dep]
     )

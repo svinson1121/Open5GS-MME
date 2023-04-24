@@ -244,7 +244,7 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
 
         if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
             /* Clobber the SGW addr if we resolved */
-            ogs_info("Successfully clobbered the SGW IP in CSR");
+            ogs_info("Successfully clobbered the SGW IP in CSR with '%s'", ipv4);
             ogs_ipv4_from_string((uint32_t*)&sgw_ue->gnode->addr.sa.sa_data[2], ipv4);
         }
         else {
