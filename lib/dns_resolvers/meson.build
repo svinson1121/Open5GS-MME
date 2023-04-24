@@ -34,11 +34,11 @@ libdnsresolvers = static_library('dns_resolvers',
     version : libogslib_version,
     c_args : '-DOGS_S1AP_COMPILATION',
     include_directories : libdnsresolvers_inc,
-    dependencies : [libapp_dep, libresolv_dep],
+    dependencies : [libcore_dep, libresolv_dep],
     install : true)
 
 libdnsresolvers_dep = declare_dependency(
     link_with : libdnsresolvers,
     include_directories : [libdnsresolvers_inc],
-    dependencies : [libapp_dep, libresolv_dep]
+    dependencies : libresolv_dep
     )
