@@ -3618,7 +3618,7 @@ mme_bearer_t *mme_bearer_find_or_add_by_message(
     pti = message->esm.h.procedure_transaction_identity;
     ebi = message->esm.h.eps_bearer_identity;
 
-    ogs_debug("mme_bearer_find_or_add_by_message() [PTI:%d, EBI:%d]",
+    ogs_info("mme_bearer_find_or_add_by_message() [PTI:%d, EBI:%d]",
             pti, ebi);
 
     if (ebi != OGS_NAS_EPS_BEARER_IDENTITY_UNASSIGNED) {
@@ -3724,13 +3724,12 @@ mme_bearer_t *mme_bearer_find_or_add_by_message(
             char sos[] = "sos";
             sess = mme_sess_find_by_apn(mme_ue, sos);
             if (sess && create_action != OGS_GTP_CREATE_IN_ATTACH_REQUEST) {
-                ogs_assert(OGS_OK ==
-                    nas_eps_send_pdn_connectivity_reject(
-                        sess,
-                        OGS_NAS_ESM_CAUSE_MULTIPLE_PDN_CONNECTIONS_FOR_A_GIVEN_APN_NOT_ALLOWED,
-                        create_action));
-                ogs_warn("APN duplicated [%s]", sos);
-                return NULL;
+                printf("SGW IP : '%s'\n", ogs_ipv4_to_string(*(uint32_t*)&sess->mme_ue->sgw_ue->gnode->addr.sa.sa_data[2])); // todo this probably needs to be changes on the other branch also 
+                printf("PGW IP : '%s'\n", ogs_ipv4_to_string(sess->session->smf_ip.addr));
+                printf("UE IP  : '%s'\n", ogs_ipv4_to_string(sess->session->paa.addr));
+                printf("IMSI   : '%s'\n", sess->mme_ue->imsi_bcd);
+                
+                ogs_warn("APN duplication detected [%s]", sos);
             }
         } else if (pdn_connectivity_request->presencemask &
             OGS_NAS_EPS_PDN_CONNECTIVITY_REQUEST_ACCESS_POINT_NAME_PRESENT) {
@@ -3738,15 +3737,13 @@ mme_bearer_t *mme_bearer_find_or_add_by_message(
             sess = mme_sess_find_by_apn(mme_ue,
                     pdn_connectivity_request->access_point_name.apn);
             if (sess && create_action != OGS_GTP_CREATE_IN_ATTACH_REQUEST) {
-                r = nas_eps_send_pdn_connectivity_reject(
-                        sess,
-                        OGS_NAS_ESM_CAUSE_MULTIPLE_PDN_CONNECTIONS_FOR_A_GIVEN_APN_NOT_ALLOWED,
-                        create_action);
-                ogs_expect(r == OGS_OK);
-                ogs_assert(r != OGS_ERROR);
-                ogs_warn("APN duplicated [%s]",
+                printf("SGW IP : '%s'\n", ogs_ipv4_to_string(*(uint32_t*)&sess->mme_ue->sgw_ue->gnode->addr.sa.sa_data[2])); // todo this probably needs to be changes on the other branch also 
+                printf("PGW IP : '%s'\n", ogs_ipv4_to_string(sess->session->smf_ip.addr));
+                printf("UE IP  : '%s'\n", ogs_ipv4_to_string(sess->session->paa.addr));
+                printf("IMSI   : '%s'\n", sess->mme_ue->imsi_bcd);
+
+                ogs_warn("APN duplication detected [%s]",
                     pdn_connectivity_request->access_point_name.apn);
-                return NULL;
             }
         } else {
             /* Default case, session assumed to be the first session in list */

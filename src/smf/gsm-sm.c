@@ -270,7 +270,7 @@ void smf_gsm_state_initial(ogs_fsm_t *s, smf_event_t *e)
         ogs_assert(gtp2_message);
 
         switch(gtp2_message->h.type) {
-        case OGS_GTP2_CREATE_SESSION_REQUEST_TYPE:
+        case OGS_GTP2_CREATE_SESSION_REQUEST_TYPE: // this happens the first PDN connectivity request
             gtp2_cause = smf_s5c_handle_create_session_request(sess,
                             e->gtp_xact,
                             &e->gtp2_message->create_session_request);
@@ -811,7 +811,7 @@ void smf_gsm_state_operational(ogs_fsm_t *s, smf_event_t *e)
             break;
 
         default:
-            ogs_error("Not implemented(type:%d)", gtp2_message->h.type);
+            ogs_error("Not implemented(type:%d)", gtp2_message->h.type); ////
         }
         break;
 
