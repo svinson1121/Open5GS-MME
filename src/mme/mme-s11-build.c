@@ -20,6 +20,7 @@
 #include "mme-context.h"
 
 #include "mme-s11-build.h"
+#include "mme-redis.h"
 
 ogs_pkbuf_t *mme_s11_build_create_session_request(
         uint8_t type, mme_sess_t *sess, int create_action)
@@ -227,6 +228,113 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
         indication.operation_indication = 1;
 
     session->paa.session_type = req->pdn_type.u8;
+
+    ogs_info("session->paa.addr %i   -- %i", session->paa.addr, mme_self()->redis_ip_reuse.enabled);
+    /* Only want to check IP leasing if doing a fresh connect 
+     * and the feature is enabled in the config */
+    if ((0 == session->paa.addr) &&
+        (true == mme_self()->redis_ip_reuse.enabled)) {
+        uint32_t ip_lease = 0;
+        bool success = redis_get_ue_ip_lease(
+            mme_ue->imsi_bcd,
+            session->name,
+            &ip_lease
+        );
+
+        if (!success) {
+            session->paa.addr = ip_lease;
+        } else {
+            ogs_error("Error: failed to get ip lease information from redis");
+        }
+    }
+    ogs_info("session->paa.addr %i", session->paa.addr);
+
+    /* If the session doesn't have an existing IP then we'll 
+     * check redis to see if we just removed this session
+     * and if we did we'll use the same ip it previously had */
+    
+
+/* 
+on attach we check if we recently had a ue with the 
+same imsi and apn connected, if we did then we'll 
+use tha apn that was stored or else well send a csr
+with a 0 for the ip to signify that we want a new ip
+
+this means that we'll reuse the same ip for recent disconnects
+
+
+on disconnect we store the imsi and apn with the set timeout (specified in a config)
+
+ */
+
+
+
+
+
+
+    ogs_info("\n\n\n\n");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     req->pdn_address_allocation.data = &session->paa;
     if (req->pdn_type.u8 == OGS_PDU_SESSION_TYPE_IPV4)
         req->pdn_address_allocation.len = OGS_PAA_IPV4_LEN;

@@ -90,8 +90,17 @@ typedef struct {
 typedef struct {
     char address[16];
     unsigned port;
+} redis_server_config_t;
+
+typedef struct {
+    bool enabled;
     unsigned expire_time_sec;
-} redis_config_t;
+} redis_dup_detection_t;
+
+typedef struct {
+    bool enabled;
+    unsigned expire_time_sec;
+} redis_ip_reuse_t;
 
 typedef struct mme_context_s {
     const char          *diam_conf_path;  /* MME Diameter conf path */
@@ -183,7 +192,9 @@ typedef struct mme_context_s {
     ogs_nas_eir_t eir;
 
     /* Redis config */
-    redis_config_t redis_config;
+    redis_server_config_t redis_server_config;
+    redis_dup_detection_t redis_dup_detection;
+    redis_ip_reuse_t redis_ip_reuse;
 
     bool emergency_bearer_services;
     size_t num_emergency_number_list_items;

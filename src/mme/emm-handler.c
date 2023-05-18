@@ -596,6 +596,14 @@ int emm_handle_tau_request(mme_ue_t *mme_ue,
         return OGS_OK;
     }
 
+    // todo test this some more
+    // ogs_info("Just got a tau request that means the ue is still connected, restarting the timer IMSI[%s] timer count in sec[%i]",
+    //     mme_ue->imsi_bcd,
+    //     10);
+    // ogs_timer_start(mme_ue->t_mobile_reachable.timer,
+    //     ogs_time_from_sec(10));
+
+
     return OGS_OK;
 }
 

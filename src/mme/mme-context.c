@@ -1570,28 +1570,77 @@ int mme_context_parse_config(void)
                         ogs_info("Emergency bearer services have been disabled");
                         *emergency_bearer_services = false;
                     }
-                } else if (!strcmp(mme_key, "redis")) {
+                } else if (!strcmp(mme_key, "redis_server")) {
                     ogs_yaml_iter_t redis_iter;
                     ogs_yaml_iter_recurse(&mme_iter, &redis_iter);
 
                     while (ogs_yaml_iter_next(&redis_iter)) {
-                        const char *eir_key = ogs_yaml_iter_key(&redis_iter);
-                        ogs_assert(eir_key);
-                        if (!strcmp(eir_key, "addr")) {
+                    ogs_info("redis_server");
+                        const char *redis_server_config_key = ogs_yaml_iter_key(&redis_iter);
+                        ogs_assert(redis_server_config_key);
+                        if (!strcmp(redis_server_config_key, "addr")) {
                             const char *redis_addr = ogs_yaml_iter_value(&redis_iter);
-                            
-                            strncpy(self.redis_config.address, redis_addr, 16);
-                        } else if (!strcmp(eir_key, "port")) {
+                            strncpy(self.redis_server_config.address, redis_addr, 16);
+                        } else if (!strcmp(redis_server_config_key, "port")) {
                             const char *redis_port = ogs_yaml_iter_value(&redis_iter);
 
                             if (redis_port)
-                                self.redis_config.port = atoi(redis_port);
-                        } else if (!strcmp(eir_key, "expire_time_sec")) {
-                            const char *redis_expire_time_sec = ogs_yaml_iter_value(&redis_iter);
+                                self.redis_server_config.port = atoi(redis_port);
+                        } else
+                            ogs_warn("unknown key `%s`", mme_key);
+                    }
+                } else if (!strcmp(mme_key, "redis_dup_detection")) {
+                    ogs_yaml_iter_t redis_dup_detection_iter;
+                    ogs_yaml_iter_recurse(&mme_iter, &redis_dup_detection_iter);
 
-                            if (redis_expire_time_sec)
-                                self.redis_config.expire_time_sec = atoi(redis_expire_time_sec);
-                        }
+                    while (ogs_yaml_iter_next(&redis_dup_detection_iter)) {
+                    ogs_info("redis_dup_detection");
+                        const char *redis_dup_detection_key = ogs_yaml_iter_key(&redis_dup_detection_iter);
+                        ogs_assert(redis_dup_detection_key);
+
+                        if (!strcmp(redis_dup_detection_key, "enabled")) {
+                            const char *redis_dup_detection_enabled = ogs_yaml_iter_value(&redis_dup_detection_iter);
+                            if (!strcmp("True", redis_dup_detection_enabled) || 
+                                !strcmp("true", redis_dup_detection_enabled)) {
+                                ogs_info("Redis message duplication functionality has been enabled");
+                                self.redis_dup_detection.enabled = true;
+                            }
+                            else {
+                                self.redis_dup_detection.enabled = false;
+                            }
+                        } else if (!strcmp(redis_dup_detection_key, "expire_time_sec")) {
+                            const char *redis_dup_detection_expire_time_sec = ogs_yaml_iter_value(&redis_dup_detection_iter);
+                            if (redis_dup_detection_expire_time_sec) {
+                                self.redis_dup_detection.expire_time_sec = atoi(redis_dup_detection_expire_time_sec);
+                            }
+                        } else
+                            ogs_warn("unknown key `%s`", mme_key);
+                    }
+                } else if (!strcmp(mme_key, "redis_ip_reuse")) {
+                    ogs_yaml_iter_t redis_ip_reuse_iter;
+                    ogs_yaml_iter_recurse(&mme_iter, &redis_ip_reuse_iter);
+
+                    while (ogs_yaml_iter_next(&redis_ip_reuse_iter)) {
+                        const char *redis_ip_reuse_key = ogs_yaml_iter_key(&redis_ip_reuse_iter);
+                        ogs_assert(redis_ip_reuse_key);
+
+                        if (!strcmp(redis_ip_reuse_key, "enabled")) {
+                            const char *redis_ip_reuse_enabled = ogs_yaml_iter_value(&redis_ip_reuse_iter);
+                            if (!strcmp("True", redis_ip_reuse_enabled) ||
+                                !strcmp("true", redis_ip_reuse_enabled)) {
+                                ogs_info("Redis ip reuse functionality has been enabled");
+                                self.redis_ip_reuse.enabled = true;
+                            }
+                            else {
+                                self.redis_ip_reuse.enabled = false;
+                            }
+                        } else if (!strcmp(redis_ip_reuse_key, "expire_time_sec")) {
+                            const char *redis_ip_reuse_expire_time_sec = ogs_yaml_iter_value(&redis_ip_reuse_iter);
+                            if (redis_ip_reuse_expire_time_sec) {
+                                self.redis_ip_reuse.expire_time_sec = atoi(redis_ip_reuse_expire_time_sec);
+                            }
+                        } else
+                            ogs_warn("unknown key `%s`", mme_key);
                     }
                 } else
                     ogs_warn("unknown key `%s`", mme_key);
