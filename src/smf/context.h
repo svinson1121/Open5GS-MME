@@ -62,6 +62,16 @@ typedef struct smf_ctf_config_s {
     smf_ctf_enabled_mode_e enabled;
 } smf_ctf_config_t;
 
+typedef struct {
+    char address[16];
+    unsigned port;
+} redis_server_config_t;
+
+typedef struct {
+    bool enabled;
+    unsigned ip_hold_time_sec;
+} redis_ip_reuse_t;
+
 int smf_ctf_config_init(smf_ctf_config_t *ctf_config);
 
 typedef struct smf_context_s {
@@ -102,6 +112,10 @@ typedef struct smf_context_s {
 #define SMF_UE_IS_LAST_SESSION(__sMF) \
      ((__sMF) && (ogs_list_count(&(__sMF)->sess_list)) == 1)
     ogs_list_t      smf_ue_list;
+
+    /* Redis configs */
+    redis_server_config_t redis_server_config;
+    redis_ip_reuse_t redis_ip_reuse;
 } smf_context_t;
 
 typedef struct smf_gtp_node_s {

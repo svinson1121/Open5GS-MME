@@ -1616,32 +1616,6 @@ int mme_context_parse_config(void)
                         } else
                             ogs_warn("unknown key `%s`", mme_key);
                     }
-                } else if (!strcmp(mme_key, "redis_ip_reuse")) {
-                    ogs_yaml_iter_t redis_ip_reuse_iter;
-                    ogs_yaml_iter_recurse(&mme_iter, &redis_ip_reuse_iter);
-
-                    while (ogs_yaml_iter_next(&redis_ip_reuse_iter)) {
-                        const char *redis_ip_reuse_key = ogs_yaml_iter_key(&redis_ip_reuse_iter);
-                        ogs_assert(redis_ip_reuse_key);
-
-                        if (!strcmp(redis_ip_reuse_key, "enabled")) {
-                            const char *redis_ip_reuse_enabled = ogs_yaml_iter_value(&redis_ip_reuse_iter);
-                            if (!strcmp("True", redis_ip_reuse_enabled) ||
-                                !strcmp("true", redis_ip_reuse_enabled)) {
-                                ogs_info("Redis ip reuse functionality has been enabled");
-                                self.redis_ip_reuse.enabled = true;
-                            }
-                            else {
-                                self.redis_ip_reuse.enabled = false;
-                            }
-                        } else if (!strcmp(redis_ip_reuse_key, "expire_time_sec")) {
-                            const char *redis_ip_reuse_expire_time_sec = ogs_yaml_iter_value(&redis_ip_reuse_iter);
-                            if (redis_ip_reuse_expire_time_sec) {
-                                self.redis_ip_reuse.expire_time_sec = atoi(redis_ip_reuse_expire_time_sec);
-                            }
-                        } else
-                            ogs_warn("unknown key `%s`", mme_key);
-                    }
                 } else
                     ogs_warn("unknown key `%s`", mme_key);
             }

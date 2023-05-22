@@ -97,11 +97,6 @@ typedef struct {
     unsigned expire_time_sec;
 } redis_dup_detection_t;
 
-typedef struct {
-    bool enabled;
-    unsigned expire_time_sec;
-} redis_ip_reuse_t;
-
 typedef struct mme_context_s {
     const char          *diam_conf_path;  /* MME Diameter conf path */
     ogs_diam_config_t   *diam_config;     /* MME Diameter config */
@@ -191,10 +186,9 @@ typedef struct mme_context_s {
     /* Control EIR functionality */
     ogs_nas_eir_t eir;
 
-    /* Redis config */
+    /* Redis configs */
     redis_server_config_t redis_server_config;
     redis_dup_detection_t redis_dup_detection;
-    redis_ip_reuse_t redis_ip_reuse;
 
     bool emergency_bearer_services;
     size_t num_emergency_number_list_items;
