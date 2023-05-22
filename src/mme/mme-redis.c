@@ -7,19 +7,28 @@ static redisContext* connection = NULL;
 
 
 void mme_redis_init(void) {
-    connection = ogs_redis_initialise(
-        mme_self()->redis_server_config.address,
-        mme_self()->redis_server_config.port
-    );
+    if (mme_self()->redis_dup_detection.enabled) {
+        connection = ogs_redis_initialise(
+            mme_self()->redis_server_config.address,
+            mme_self()->redis_server_config.port
+        );
+    }
 }
 
 void mme_redis_final(void) {
-    ogs_redis_finalise(connection);
+    if (mme_self()->redis_dup_detection.enabled) {
+        ogs_redis_finalise(connection);
+    }
 }
 
 bool redis_is_messgae_dup(uint8_t *buf, size_t buf_sz) {
     bool is_dup = true;
     redisReply *reply = NULL;
+
+    if (NULL == connection) {
+        ogs_error("Cannot call redis_is_messgae_dup without a valid redis connection");
+        return false;
+    }
 
     /* Have we seen this exact message recently? */
     reply = redisCommand(connection, "GET %b", buf, buf_sz);
