@@ -33,6 +33,8 @@ void smf_redis_init(void) {
         if (!pfcp_ue_ip_pool_to_redis()) {
             ogs_fatal("Error: Failed to store all potential ue ips in redis");
         }
+
+        ogs_debug("Number of IPs loaded onto redis: %i", redis_get_num_available_ips());
     }
 }
 
@@ -79,10 +81,15 @@ ogs_pfcp_ue_ip_t *redis_ue_ip_alloc(const char* imsi_bcd, const char* apn) {
     uint32_t ipv4 = 0;
 
     if (redis_get_temp_ip_hold(imsi_bcd, apn, &ipv4)) {
-        ogs_info("We just caught a temp ip hold");
         isSuccess = redis_remove_available_ip(ipv4);
+        char *ip_str = ogs_ipv4_to_string(ipv4);
+        ogs_debug("UE [IMSI:APN] has rejoined during the holding interval, it will keep the IP '%s'", ip_str);
+        ogs_free(ip_str);
     } else {
         isSuccess = redis_pop_available_ip(&ipv4);
+        char *ip_str = ogs_ipv4_to_string(ipv4);
+        ogs_debug("UE [IMSI:APN] has not been seen recently and has been given the IP '%s'", ip_str);
+        ogs_free(ip_str);
     }
 
     if (isSuccess) {
@@ -99,6 +106,29 @@ ogs_pfcp_ue_ip_t *redis_ue_ip_alloc(const char* imsi_bcd, const char* apn) {
     }
 
     return ue_ip; 
+}
+
+int redis_get_num_available_ips(void) {
+    int available = 0;
+    
+    if (NULL == connection) {
+        ogs_error("Cannot call redis_ue_ip_alloc without a valid redis connection");
+        return 0;
+    }
+
+    redisReply *reply = redisCommand(connection, "ZCOUNT %s -inf +inf", available_ip_record_key);
+    
+    if (NULL == reply) {
+        return 0;
+    }
+
+    if (REDIS_REPLY_INTEGER == reply->type) {
+        available = (int)reply->integer;
+    }
+    
+    freeReplyObject(reply);
+
+    return available;
 }
 
 static bool redis_clear_ip_reuse_from_redis(void) {
