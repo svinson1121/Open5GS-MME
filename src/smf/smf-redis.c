@@ -54,6 +54,9 @@ bool redis_ip_recycle(const char* imsi_bcd, const char* apn, uint32_t ipv4) {
     }
 
     if (!redis_set_temp_ip_hold(imsi_bcd, apn, ipv4)) {
+        char *ip_str = ogs_ipv4_to_string(ipv4);
+        ogs_error("Failed to set temporary hold on IP '%s' for UE [%s:%s], something has gone terribly wrong", imsi_bcd, apn, ip_str);
+        ogs_free(ip_str);
         return false;
     }
 
@@ -83,12 +86,12 @@ ogs_pfcp_ue_ip_t *redis_ue_ip_alloc(const char* imsi_bcd, const char* apn) {
     if (redis_get_temp_ip_hold(imsi_bcd, apn, &ipv4)) {
         isSuccess = redis_remove_available_ip(ipv4);
         char *ip_str = ogs_ipv4_to_string(ipv4);
-        ogs_debug("UE [IMSI:APN] has rejoined during the holding interval, it will keep the IP '%s'", ip_str);
+        ogs_debug("UE [%s:%s] has rejoined during the holding interval, it will keep the IP '%s'", imsi_bcd, apn, ip_str);
         ogs_free(ip_str);
     } else {
         isSuccess = redis_pop_available_ip(&ipv4);
         char *ip_str = ogs_ipv4_to_string(ipv4);
-        ogs_debug("UE [IMSI:APN] has not been seen recently and has been given the IP '%s'", ip_str);
+        ogs_debug("UE [%s:%s] has not been seen recently and has been given the IP '%s'", imsi_bcd, apn, ip_str);
         ogs_free(ip_str);
     }
 
@@ -119,6 +122,7 @@ int redis_get_num_available_ips(void) {
     redisReply *reply = redisCommand(connection, "ZCOUNT %s -inf +inf", available_ip_record_key);
     
     if (NULL == reply) {
+        ogs_error("Got NULL response from redis, something has gone terribly wrong");
         return 0;
     }
 
@@ -135,6 +139,7 @@ static bool redis_clear_ip_reuse_from_redis(void) {
     redisReply *reply = redisCommand(connection, "DEL %s", available_ip_record_key);
     
     if (NULL == reply) {
+        ogs_error("Got NULL response from redis, something has gone terribly wrong");
         return false;
     }
     
@@ -171,6 +176,7 @@ static bool redis_pop_available_ip(uint32_t* ipv4) {
     redisReply *reply = redisCommand(connection, "ZRANGEBYSCORE %s -inf %li LIMIT 0 1", available_ip_record_key, currentTime);
 
     if (NULL == reply) {
+        ogs_error("Got NULL response from redis, something has gone terribly wrong");
         return false;
     }
 
@@ -191,6 +197,7 @@ static bool redis_pop_available_ip(uint32_t* ipv4) {
     reply = redisCommand(connection, "ZREM %s %i", available_ip_record_key, *ipv4);
     
     if (NULL == reply) {
+        ogs_error("Got NULL response from redis, something has gone terribly wrong");
         return false;
     }
 
@@ -215,6 +222,7 @@ static bool redis_set_temp_ip_hold(const char* imsi_bcd, const char* apn, uint32
     );
 
     if (NULL == reply) {
+        ogs_error("Got NULL response from redis, something has gone terribly wrong");
         return false;
     }
 
@@ -228,6 +236,7 @@ static bool redis_get_temp_ip_hold(const char* imsi_bcd, const char* apn, uint32
     redisReply *reply = redisCommand(connection, "GET [%s:%s]", imsi_bcd, apn);
 
     if (NULL == reply) {
+        ogs_error("Got NULL response from redis, something has gone terribly wrong");
         return false;
     }
 
@@ -248,6 +257,7 @@ static bool redis_remove_available_ip(uint32_t ipv4) {
     redisReply *reply = redisCommand(connection, "ZREM %s %i", available_ip_record_key, ipv4);
     
     if (NULL == reply) {
+        ogs_error("Got NULL response from redis, something has gone terribly wrong");
         return false;
     }
 
@@ -265,6 +275,7 @@ static bool redis_add_available_ip(uint32_t ipv4, size_t available_time) {
     redisReply *reply = redisCommand(connection, "ZADD %s %u %u", available_ip_record_key, available_time, ipv4);
 
     if (NULL == reply) {
+        ogs_error("Got NULL response from redis, something has gone terribly wrong");
         return false;
     }
 

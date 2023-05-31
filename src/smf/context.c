@@ -1572,10 +1572,10 @@ uint8_t smf_sess_set_ue_ip(smf_sess_t *sess)
                 sess->ipv4->addr, OGS_IPV4_LEN, NULL);
         if (smf_self()->redis_ip_reuse.enabled) {
             if (!redis_ip_recycle(sess->smf_ue->imsi_bcd, sess->session.name, sess->ipv4->addr[0])) {
-                ogs_error("Failed to recycle IP");
+                ogs_fatal("Failed to recycle IP");
             } else {
                 char *recycled_ip_str = ogs_ipv4_to_string(sess->ipv4->addr[0]);
-                ogs_debug("IP has successfully entered the recycling process (%s)", recycled_ip_str);
+                ogs_debug("IP '%s' has successfully entered the recycling process", recycled_ip_str);
                 ogs_free(recycled_ip_str);
             }
 
@@ -1642,18 +1642,6 @@ uint8_t smf_sess_set_ue_ip(smf_sess_t *sess)
             if (sess->ipv4) {
                 ogs_hash_set(smf_self()->ipv4_hash,
                         sess->ipv4->addr, OGS_IPV4_LEN, NULL);
-                if (smf_self()->redis_ip_reuse.enabled) {
-                    if (!redis_ip_recycle(sess->smf_ue->imsi_bcd, sess->session.name, sess->ipv4->addr[0])) {
-                        ogs_error("Failed to recycle IP");
-                    } else {
-                        char *recycled_ip_str = ogs_ipv4_to_string(sess->ipv4->addr[0]);
-                        ogs_debug("IP has successfully entered the recycling process (%s)", recycled_ip_str);
-                        ogs_free(recycled_ip_str);
-                    }
-
-                    ogs_debug("Number of available IPs on redis is now %i", redis_get_num_available_ips());
-                }
-
                 ogs_pfcp_ue_ip_free(sess->ipv4);
                 sess->ipv4 = NULL;
             }
@@ -1803,9 +1791,16 @@ void smf_sess_remove(smf_sess_t *sess)
 
     if (sess->ipv4) {
         ogs_hash_set(self.ipv4_hash, sess->ipv4->addr, OGS_IPV4_LEN, NULL);
-        if (smf_self()->redis_ip_reuse.enabled &&
-            !redis_ip_recycle(sess->smf_ue->imsi_bcd, sess->session.name, sess->ipv4->addr[0])) {
-            ogs_error("Failed to recycle IP");
+        if (smf_self()->redis_ip_reuse.enabled) {
+            if (!redis_ip_recycle(sess->smf_ue->imsi_bcd, sess->session.name, sess->ipv4->addr[0])) {
+                ogs_fatal("Failed to recycle IP");
+            } else {
+                char *recycled_ip_str = ogs_ipv4_to_string(sess->ipv4->addr[0]);
+                ogs_debug("IP '%s' has successfully entered the recycling process", recycled_ip_str);
+                ogs_free(recycled_ip_str);
+            }
+
+            ogs_debug("Number of available IPs on redis is now %i", redis_get_num_available_ips());
         }
         ogs_pfcp_ue_ip_free(sess->ipv4);
     }
