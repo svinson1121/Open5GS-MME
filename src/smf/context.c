@@ -470,6 +470,24 @@ int smf_context_parse_config(void)
                             else
                                 ogs_warn("unknown 'enabled' value `%s`",
                                         enabled);
+                        } else if (!strcmp(ctf_key, "online_charging_apns")) {
+                            ogs_yaml_iter_t online_charging_apns_iter;
+                            ogs_yaml_iter_recurse(&ctf_iter, &online_charging_apns_iter);
+
+                            /* Going through 'online_charging_apns' array */
+                            while (ogs_yaml_iter_next(&online_charging_apns_iter)) {
+                                const char *online_charging_apn = NULL;
+                                online_charging_apn = ogs_yaml_iter_value(&online_charging_apns_iter);
+
+                                if ((NULL != online_charging_apn) && (self.ctf_config.num_online_charging_apns < MAX_ONLINE_CHARGING_APNS)) {
+                                    strncpy(
+                                        self.ctf_config.online_charging_apns[self.ctf_config.num_online_charging_apns],
+                                        online_charging_apn,
+                                        MAX_ONLINE_CHARGING_APNS_STR - 1
+                                    );
+                                    ++self.ctf_config.num_online_charging_apns;
+                                }
+                            }
                         } else
                             ogs_warn("unknown key `%s`", ctf_key);
                     }
