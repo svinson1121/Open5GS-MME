@@ -157,6 +157,8 @@ int sgwc_context_parse_config(void)
                     if (c_bearer_deactivation_timer_sec) {
                         self.bearer_deactivation_timer_sec = atoi(c_bearer_deactivation_timer_sec);
                     }
+                } else if (!strcmp(sgwc_key, "metrics")) {
+                    /* handle config in metrics library */
                 } else
                     ogs_warn("unknown key `%s`", sgwc_key);
             }
