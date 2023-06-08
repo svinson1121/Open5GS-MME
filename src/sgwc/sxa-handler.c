@@ -260,6 +260,7 @@ void sgwc_sxa_handle_session_establishment_response(
         ogs_gtp_send_error_message(
                 s11_xact, sgwc_ue ? sgwc_ue->mme_s11_teid : 0,
                 OGS_GTP2_CREATE_SESSION_RESPONSE_TYPE, cause_value);
+        sgwc_metrics_inst_global_inc(SGWC_METR_GLOB_CTR_SM_ESTABLISHPFCPSESSIONFAIL);
         return;
     }
 
@@ -285,6 +286,7 @@ void sgwc_sxa_handle_session_establishment_response(
                     s11_xact, sgwc_ue ? sgwc_ue->mme_s11_teid : 0,
                     OGS_GTP2_CREATE_SESSION_RESPONSE_TYPE,
                     OGS_GTP2_CAUSE_GRE_KEY_NOT_FOUND);
+            sgwc_metrics_inst_global_inc(SGWC_METR_GLOB_CTR_SM_ESTABLISHPFCPSESSIONFAIL);
             return;
         }
 
@@ -390,6 +392,7 @@ void sgwc_sxa_handle_session_establishment_response(
         pkbuf = ogs_gtp2_build_msg(&send_message);
         if (!pkbuf) {
             ogs_error("ogs_gtp2_build_msg() failed");
+            sgwc_metrics_inst_global_inc(SGWC_METR_GLOB_CTR_SM_ESTABLISHPFCPSESSIONFAIL);
             return;
         }
 
@@ -398,6 +401,7 @@ void sgwc_sxa_handle_session_establishment_response(
                 sess->gnode, &send_message.h, pkbuf, sess_timeout, sess);
         if (!s5c_xact) {
             ogs_error("ogs_gtp_xact_local_create() failed");
+            sgwc_metrics_inst_global_inc(SGWC_METR_GLOB_CTR_SM_ESTABLISHPFCPSESSIONFAIL);
             return;
         }
         s5c_xact->local_teid = sess->sgw_s5c_teid;
@@ -434,6 +438,7 @@ void sgwc_sxa_handle_session_establishment_response(
         pkbuf = ogs_gtp2_build_msg(recv_message);
         if (!pkbuf) {
             ogs_error("ogs_gtp2_build_msg() failed");
+            sgwc_metrics_inst_global_inc(SGWC_METR_GLOB_CTR_SM_ESTABLISHPFCPSESSIONFAIL);
             return;
         }
 
@@ -442,6 +447,7 @@ void sgwc_sxa_handle_session_establishment_response(
                 sess->gnode, &recv_message->h, pkbuf, sess_timeout, sess);
         if (!s5c_xact) {
             ogs_error("ogs_gtp_xact_local_create() failed");
+            sgwc_metrics_inst_global_inc(SGWC_METR_GLOB_CTR_SM_ESTABLISHPFCPSESSIONFAIL);
             return;
         }
         s5c_xact->local_teid = sess->sgw_s5c_teid;
@@ -450,8 +456,8 @@ void sgwc_sxa_handle_session_establishment_response(
     ogs_gtp_xact_associate(s11_xact, s5c_xact);
 
     rv = ogs_gtp_xact_commit(s5c_xact);
-    sgwc_metrics_inst_global_inc(SGWC_METR_GLOB_CTR_SM_ESTABLISHPFCPSESSIONSUCC);
     ogs_expect(rv == OGS_OK);
+    sgwc_metrics_inst_global_inc(SGWC_METR_GLOB_CTR_SM_ESTABLISHPFCPSESSIONSUCC);
 }
 
 void sgwc_sxa_handle_session_modification_response(
