@@ -585,6 +585,7 @@ void sgwc_sxa_handle_session_modification_response(
         }
 
         cause_value = gtp_cause_from_pfcp(pfcp_cause_value);
+        sgwc_metrics_inst_global_inc(SGWC_METR_GLOB_CTR_SM_MODIFYPFCPSESSIONSUCC);
     }
 
     if (cause_value != OGS_GTP2_CAUSE_REQUEST_ACCEPTED) {
@@ -645,6 +646,7 @@ void sgwc_sxa_handle_session_modification_response(
         }
 
         ogs_pfcp_xact_commit(pfcp_xact);
+        sgwc_metrics_inst_global_inc(SGWC_METR_GLOB_CTR_SM_MODIFYPFCPSESSIONFAIL);
         return;
     }
 
