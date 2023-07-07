@@ -11,6 +11,7 @@ extern "C" {
 typedef enum mme_metric_type_global_s {
     MME_METR_GLOB_GAUGE_ENB_UE,
     MME_METR_GLOB_GAUGE_MME_SESS,
+    MME_METR_GLOB_GAUGE_EMERGENCY_BEARERS,
     _MME_METR_GLOB_MAX,
 } mme_metric_type_global_t;
 extern ogs_metrics_inst_t *mme_metrics_inst_global[_MME_METR_GLOB_MAX];
@@ -29,14 +30,19 @@ static inline void mme_metrics_inst_global_dec(mme_metric_type_global_t t)
 
 typedef enum mme_metric_type_local_s {
     MME_METR_LOCAL_GAUGE_ENB,
+    MME_METR_LOCAL_GAUGE_ENB_ID,
     _MME_METR_LOCAL_MAX,
 } mme_metric_type_local_t;
 
 int mme_metrics_init_inst_local(void);
 int mme_metrics_free_inst_local(void);
+void mme_metrics_init_local(void);
 
 void mme_metrics_connected_enb_inc(char *ip_address);
 void mme_metrics_connected_enb_dec(char *ip_address);
+
+void mme_metrics_connected_enb_id_inc(mme_metric_type_local_t t, char* ip_address, char* cell_id);
+void mme_metrics_connected_enb_id_dec(mme_metric_type_local_t t, char* ip_address, char* cell_id);
 
 void mme_metrics_init(void);
 void mme_metrics_final(void);

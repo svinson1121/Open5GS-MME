@@ -161,6 +161,12 @@ int esm_handle_pdn_connectivity_request(mme_bearer_t *bearer,
 
         ogs_assert(OGS_OK ==
             mme_gtp_send_create_session_request(sess, create_action));
+
+        // todo
+        if (!strcmp("sos", sess->session->name)) {
+            mme_metrics_inst_global_inc(MME_METR_GLOB_GAUGE_EMERGENCY_BEARERS);
+        }
+
     } else {
         ogs_error("No APN");
         r = nas_eps_send_pdn_connectivity_reject(

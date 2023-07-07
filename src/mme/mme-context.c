@@ -2274,10 +2274,12 @@ int mme_enb_remove(mme_enb_t *enb)
      * S1-Reset Ack buffer is not cleared at this point.
      * ogs_sctp_flush_and_destroy will clear this buffer
      */
-
     char buf[OGS_ADDRSTRLEN];
     OGS_ADDR(enb->sctp.addr, buf);
     mme_metrics_connected_enb_dec(buf);
+    char cell_id[16] = ""; // todo give this a real number
+    sprintf(cell_id, "%u", enb->enb_id);
+    mme_metrics_connected_enb_id_dec(MME_METR_LOCAL_GAUGE_ENB_ID, buf, cell_id);
 
     ogs_sctp_flush_and_destroy(&enb->sctp);
 
