@@ -3430,6 +3430,12 @@ void mme_sess_remove(mme_sess_t *sess)
     mme_ue = sess->mme_ue;
     ogs_assert(mme_ue);
 
+    ogs_assert(sess->session);
+    ogs_assert(sess->session->name);
+    if (!strcmp("sos", sess->session->name)) {
+        mme_metrics_inst_global_dec(MME_METR_GLOB_GAUGE_EMERGENCY_BEARERS);
+    }
+
     ogs_list_remove(&mme_ue->sess_list, sess);
 
     mme_bearer_remove_all(sess);
