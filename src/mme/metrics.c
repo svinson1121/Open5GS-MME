@@ -193,7 +193,6 @@ int mme_metrics_free_inst_local(void)
     return mme_metrics_free_inst(&mme_metrics_inst_local, _MME_METR_LOCAL_MAX);
 }
 
-// todo make these a generic ip-key whatever-value pair
 void mme_metrics_connected_enb_id_inc(mme_metric_type_local_t t, char* ip_address, char* cell_id)
 {
     ogs_metrics_inst_t *metrics = get_dynamically_initialised_metric(t, ip_address, cell_id);
@@ -208,7 +207,6 @@ void mme_metrics_connected_enb_id_inc(mme_metric_type_local_t t, char* ip_addres
     }
 }
 
-// todo change to add and remove or whatever to better indicate what it actually does
 void mme_metrics_connected_enb_id_dec(mme_metric_type_local_t t, char* ip_address, char* cell_id)
 {
     ogs_metrics_inst_t *metrics = get_dynamically_initialised_metric(t, ip_address, cell_id);
