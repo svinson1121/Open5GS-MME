@@ -3432,7 +3432,11 @@ void mme_sess_remove(mme_sess_t *sess)
 
     ogs_assert(sess->session);
     ogs_assert(sess->session->name);
-    if (!strcmp("sos", sess->session->name)) {
+
+    if ((NULL == sess->session) ||
+        (NULL == sess->session->name)) {
+        ogs_error("Session information was NULL, could not decrement MME_METR_GLOB_GAUGE_EMERGENCY_BEARERS gauge");
+    } else if (!strcmp("sos", sess->session->name)) {
         mme_metrics_inst_global_dec(MME_METR_GLOB_GAUGE_EMERGENCY_BEARERS);
     }
 
