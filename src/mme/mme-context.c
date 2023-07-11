@@ -2274,10 +2274,12 @@ int mme_enb_remove(mme_enb_t *enb)
      * S1-Reset Ack buffer is not cleared at this point.
      * ogs_sctp_flush_and_destroy will clear this buffer
      */
-
     char buf[OGS_ADDRSTRLEN];
     OGS_ADDR(enb->sctp.addr, buf);
     mme_metrics_connected_enb_dec(buf);
+    char cell_id[16] = ""; // todo give this a real number
+    sprintf(cell_id, "%u", enb->enb_id);
+    mme_metrics_connected_enb_id_dec(MME_METR_LOCAL_GAUGE_ENB_ID, buf, cell_id);
 
     ogs_sctp_flush_and_destroy(&enb->sctp);
 
@@ -3427,6 +3429,13 @@ void mme_sess_remove(mme_sess_t *sess)
     ogs_assert(sess);
     mme_ue = sess->mme_ue;
     ogs_assert(mme_ue);
+
+    if ((NULL == sess->session) ||
+        (NULL == sess->session->name)) {
+        ogs_error("Session information was NULL, could not check if we needed to decrement MME_METR_GLOB_GAUGE_EMERGENCY_BEARERS gauge");
+    } else if (!strcmp("sos", sess->session->name)) {
+        mme_metrics_inst_global_dec(MME_METR_GLOB_GAUGE_EMERGENCY_BEARERS);
+    }
 
     ogs_list_remove(&mme_ue->sess_list, sess);
 

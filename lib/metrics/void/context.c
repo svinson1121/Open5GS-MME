@@ -95,7 +95,7 @@ void ogs_metrics_inst_set(ogs_metrics_inst_t *inst, int val)
 {
 }
 
-void ogs_metrics_inst_set_with_label(ogs_metrics_inst_t *inst, char *label, int val)
+void ogs_metrics_inst_set_with_labels(ogs_metrics_inst_t *inst, const char **label_values, int val)
 {
 }
 

@@ -193,6 +193,12 @@ void s1ap_handle_s1_setup_request(mme_enb_t *enb, ogs_s1ap_message_t *message)
         return;
     }
 
+    char ip[OGS_ADDRSTRLEN];
+    OGS_ADDR(enb->sctp.addr, ip);
+    char cell_id[16] = ""; // todo give this a real number
+    sprintf(cell_id, "%u", enb_id);
+    mme_metrics_connected_enb_id_inc(MME_METR_LOCAL_GAUGE_ENB_ID, ip, cell_id);
+
     enb->state.s1_setup_success = true;
     r = s1ap_send_s1_setup_response(enb);
     ogs_expect(r == OGS_OK);
