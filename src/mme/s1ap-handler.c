@@ -557,7 +557,6 @@ void s1ap_handle_uplink_nas_transport(
     r = s1ap_send_to_nas(enb_ue,
             S1AP_ProcedureCode_id_uplinkNASTransport, NAS_PDU);
     ogs_expect(r == OGS_OK);
-    ogs_assert(r != OGS_ERROR);
 }
 
 void s1ap_handle_ue_capability_info_indication(
