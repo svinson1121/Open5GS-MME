@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2022 by Sukchan Lee <acetcom@gmail.com>
+ * Copyright (C) 2019-2023 by Sukchan Lee <acetcom@gmail.com>
  *
  * This file is part of Open5GS.
  *
@@ -28,7 +28,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#define OGS_MAX_NUM_OF_SESS             8   /* Num of APN(Session) per UE */
+#define OGS_MAX_NUM_OF_SESS             10  /* Num of APN(Session) per UE */
 #define OGS_MAX_NUM_OF_BEARER           4   /* Num of Bearer per Session */
 #define OGS_BEARER_PER_UE               8   /* Num of Bearer per UE */
 #define OGS_MAX_NUM_OF_PACKET_BUFFER    64  /* Num of PacketBuffer per UE */
@@ -83,10 +83,12 @@ extern "C" {
 #define OGS_MAX_DNN_LEN                 100
 #define OGS_MAX_APN_LEN                 OGS_MAX_DNN_LEN
 #define OGS_MAX_PCO_LEN                 251
+#define OGS_MAX_EPCO_LEN                65535
 #define OGS_MAX_FQDN_LEN                256
 
 #define OGS_MAX_NUM_OF_SERVED_GUAMI     8
-#define OGS_MAX_NUM_OF_SERVED_TAI       128
+#define OGS_MAX_NUM_OF_SERVED_TAI       OGS_MAX_NUM_OF_TAI
+#define OGS_MAX_NUM_OF_ACCESS_CONTROL   8
 #define OGS_MAX_NUM_OF_ALGORITHM        8
 
 #define OGS_MAX_NUM_OF_BPLMN            6
@@ -196,7 +198,7 @@ char *ogs_id_get_value(char *str);
 
 /************************************
  * TAI Structure                    */
-#define OGS_MAX_NUM_OF_TAI              16
+#define OGS_MAX_NUM_OF_TAI              128
 typedef struct ogs_eps_tai_s {
     ogs_plmn_id_t plmn_id;
     uint16_t tac;

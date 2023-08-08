@@ -25,7 +25,7 @@ static ogs_thread_t *thread;
 static void amf_main(void *data);
 static int initialized = 0;
 
-int amf_initialize()
+int amf_initialize(void)
 {
     int rv;
 
@@ -44,9 +44,6 @@ int amf_initialize()
     if (rv != OGS_OK) return rv;
 
     rv = amf_context_nf_info();
-    if (rv != OGS_OK) return rv;
-
-    rv = amf_m_tmsi_pool_generate();
     if (rv != OGS_OK) return rv;
 
     rv = ogs_log_config_domain(

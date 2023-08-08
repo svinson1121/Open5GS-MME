@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019,2020 by Sukchan Lee <acetcom@gmail.com>
+ * Copyright (C) 2019-2023 by Sukchan Lee <acetcom@gmail.com>
  *
  * This file is part of Open5GS.
  *
@@ -76,6 +76,7 @@ typedef struct test_context_s {
     uint8_t num_of_e_served_tai;
     struct {
         ogs_eps_tai0_list_t list0;
+        ogs_eps_tai1_list_t list1;
         ogs_eps_tai2_list_t list2;
     } e_served_tai[OGS_MAX_NUM_OF_SERVED_TAI];
 
@@ -85,6 +86,7 @@ typedef struct test_context_s {
     uint8_t num_of_nr_served_tai;
     struct {
         ogs_5gs_tai0_list_t list0;
+        ogs_5gs_tai1_list_t list1;
         ogs_5gs_tai2_list_t list2;
     } nr_served_tai[OGS_MAX_NUM_OF_SERVED_TAI];
 
@@ -255,10 +257,11 @@ typedef struct test_pdu_session_establishment_param_s {
 typedef struct test_pdn_connectivity_param_s {
     union {
         struct {
-        ED6(uint8_t eit:1;,
+        ED7(uint8_t eit:1;,
             uint8_t eit_no_required:1;,
             uint8_t apn:1;,
             uint8_t pco:1;,
+            uint8_t epco:1;,
             uint8_t spare:1;,
             uint8_t request_type:3;)
         };
@@ -270,7 +273,7 @@ typedef struct test_esm_information_param_s {
     union {
         struct {
         ED8(uint8_t pco:1;,
-            uint8_t spare1:1;,
+            uint8_t epco:1;,
             uint8_t spare2:1;,
             uint8_t spare3:1;,
             uint8_t spare4:1;,

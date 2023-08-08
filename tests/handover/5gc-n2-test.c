@@ -1907,6 +1907,9 @@ static void indirect_complete_func(abts_case *tc, void *data)
     ABTS_PTR_NOTNULL(tc, recvbuf);
     ogs_pkbuf_free(recvbuf);
 
+    /* Waiting for removing Indirect Data Forwarding */
+    ogs_msleep(100);
+
     /* Send HandoverRequired */
     sendbuf = testngap_build_handover_required(
             test_ue, NGAP_HandoverType_intra5gs,

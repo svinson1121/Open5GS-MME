@@ -40,7 +40,8 @@ static int upf_metrics_init_spec(ogs_metrics_context_t *ctx,
     for (i = 0; i < len; i++) {
         dst[i] = ogs_metrics_spec_new(ctx, src[i].type,
                 src[i].name, src[i].description,
-                src[i].initial_val, src[i].num_labels, src[i].labels);
+                src[i].initial_val, src[i].num_labels, src[i].labels,
+                NULL);
     }
     return OGS_OK;
 }
@@ -285,7 +286,7 @@ void upf_metrics_inst_by_dnn_add(char *dnn,
     ogs_assert(dnn_key);
 
     if (dnn) {
-        strcpy(dnn_key->dnn, dnn);
+        ogs_cpystrn(dnn_key->dnn, dnn, ogs_min(strlen(dnn), OGS_MAX_DNN_LEN)+1);
     } else {
         dnn_key->dnn[0] = '\0';
     }

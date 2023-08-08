@@ -36,7 +36,7 @@ static void mme_main(void *data);
 
 static int initialized = 0;
 
-int mme_initialize()
+int mme_initialize(void)
 {
     int rv;
 
@@ -59,9 +59,6 @@ int mme_initialize()
 
     rv = ogs_log_config_domain(
             ogs_app()->logger.domain, ogs_app()->logger.level);
-    if (rv != OGS_OK) return rv;
-
-    rv = mme_m_tmsi_pool_generate();
     if (rv != OGS_OK) return rv;
 
     ogs_metrics_context_open(ogs_metrics_self());

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2022 by Sukchan Lee <acetcom@gmail.com>
+ * Copyright (C) 2019-2023 by Sukchan Lee <acetcom@gmail.com>
  *
  * This file is part of Open5GS.
  *
@@ -110,7 +110,7 @@ int nssf_context_parse_config(void)
                         int family = AF_UNSPEC;
                         int i, num = 0;
                         const char *hostname[OGS_MAX_NUM_OF_HOSTNAME];
-                        uint16_t port = ogs_sbi_self()->sbi_port;
+                        uint16_t port = ogs_sbi_server_default_port();
                         const char *dev = NULL;
                         ogs_sockaddr_t *addr = NULL;
                         const char *sst = NULL, *sd = NULL;
@@ -347,7 +347,7 @@ char *nssf_nsi_nrf_uri(nssf_nsi_t *nsi)
     return ogs_uridup(ogs_app()->sbi.server.no_tls == false, nsi->addr, &h);
 }
 
-int get_nsi_load()
+int get_nsi_load(void)
 {
     return (((ogs_pool_size(&nssf_nsi_pool) -
             ogs_pool_avail(&nssf_nsi_pool)) * 100) /

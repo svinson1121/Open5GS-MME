@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2022 by Sukchan Lee <acetcom@gmail.com>
+ * Copyright (C) 2019-2023 by Sukchan Lee <acetcom@gmail.com>
  *
  * This file is part of Open5GS.
  *
@@ -57,8 +57,6 @@ typedef struct ogs_sbi_context_s {
         uint8_t scheme;
         uint8_t key[OGS_ECCKEY_LEN]; /* 32 bytes Private Key */
     } hnet[OGS_HOME_NETWORK_PKI_VALUE_MAX+1]; /* PKI Value : 1 ~ 254 */
-
-    uint16_t sbi_port;                      /* SBI local port */
 
     ogs_list_t server_list;
     ogs_list_t client_list;
@@ -218,6 +216,7 @@ typedef struct ogs_sbi_nf_service_s {
     struct {
         ogs_sockaddr_t *ipv4;
         ogs_sockaddr_t *ipv6;
+        bool is_port;
         int port;
     } addr[OGS_SBI_MAX_NUM_OF_IP_ADDRESS];
 
@@ -246,11 +245,14 @@ typedef struct ogs_sbi_subscription_spec_s {
 typedef struct ogs_sbi_subscription_data_s {
     ogs_lnode_t lnode;
 
+#define OGS_SBI_VALIDITY_SEC(v) \
+        ogs_time_sec(v) + (ogs_time_usec(v) ? 1 : 0)
     struct {
         int validity_duration;
     } time;
 
     ogs_timer_t *t_validity;                /* check validation */
+    ogs_timer_t *t_patch;                   /* for sending PATCH */
 
     char *id;                               /* SubscriptionId */
     char *req_nf_instance_id;               /* reqNfInstanceId */
@@ -398,7 +400,10 @@ ogs_sbi_client_t *ogs_sbi_client_find_by_service_type(
 
 void ogs_sbi_client_associate(ogs_sbi_nf_instance_t *nf_instance);
 
-OpenAPI_uri_scheme_e ogs_sbi_default_uri_scheme(void);
+OpenAPI_uri_scheme_e ogs_sbi_server_default_scheme(void);
+OpenAPI_uri_scheme_e ogs_sbi_client_default_scheme(void);
+int ogs_sbi_server_default_port(void);
+int ogs_sbi_client_default_port(void);
 
 #define OGS_SBI_SETUP_NF_INSTANCE(__cTX, __nFInstance) \
     do { \

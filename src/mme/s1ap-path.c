@@ -41,7 +41,7 @@ int s1ap_open(void)
     return OGS_OK;
 }
 
-void s1ap_close()
+void s1ap_close(void)
 {
     ogs_socknode_remove_all(&mme_self()->s1ap_list);
     ogs_socknode_remove_all(&mme_self()->s1ap_list6);
@@ -419,7 +419,10 @@ int s1ap_send_paging(mme_ue_t *mme_ue, S1AP_CNDomain_t cn_domain)
         return OGS_NOTFOUND;
     }
 
-    ogs_assert(ogs_timer_running(mme_ue->t_implicit_detach.timer) == false);
+    if (true == ogs_timer_running(mme_ue->t_implicit_detach.timer)) {
+        ogs_error("Trying to send paging when the implicit detach timer is running");
+        return OGS_ERROR;
+    }
 
     /* Find enB with matched TAI */
     ogs_list_for_each(&mme_self()->enb_list, enb) {
