@@ -61,6 +61,28 @@ typedef struct sgwc_ue_s {
     int             imsi_len;
     char            imsi_bcd[OGS_MAX_IMSI_BCD_LEN+1];
 
+    /* MSISDN */
+    uint8_t msisdn[OGS_MAX_MSISDN_LEN];
+    int msisdn_len;
+    char msisdn_bcd[OGS_MAX_MSISDN_BCD_LEN+1];
+
+    /* IMEI */
+    uint8_t imeisv[OGS_MAX_IMEISV_LEN];
+    int imeisv_len;
+    char  imeisv_bcd[OGS_MAX_IMEISV_BCD_LEN+1];
+
+    /* Timezone */
+    uint8_t timezone_raw[OGS_MAX_TIMEZONE_RAW_LEN];
+    int timezone_raw_len;
+
+    /* UE IP */
+    uint8_t ue_ip_raw[OGS_MAX_IP_RAW_LEN];
+    int ue_ip_raw_len;
+
+    /* PGW IP */
+    uint8_t pgw_ip_raw[OGS_MAX_IP_RAW_LEN];
+    int pgw_ip_raw_len;
+
     /* User-Location-Info */
     bool            uli_presence;
     ogs_eps_tai_t   e_tai;

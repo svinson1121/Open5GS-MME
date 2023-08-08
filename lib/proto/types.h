@@ -64,6 +64,9 @@ extern "C" {
 #define OGS_MAX_IMSI_LEN                \
     OGS_BCD_TO_BUFFER_LEN(OGS_MAX_IMSI_BCD_LEN)
 
+#define OGS_MAX_TIMEZONE_RAW_LEN        16
+#define OGS_MAX_IP_RAW_LEN              16
+
 #define OGS_MAX_IMEISV_BCD_LEN          16
 #define OGS_MAX_IMEISV_LEN              \
     OGS_BCD_TO_BUFFER_LEN(OGS_MAX_IMEISV_BCD_LEN)

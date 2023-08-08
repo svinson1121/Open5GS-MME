@@ -146,6 +146,8 @@ int sgwc_context_parse_config(void)
                     /* handle config in gtp library */
                 } else if (!strcmp(sgwc_key, "pfcp")) {
                     /* handle config in pfcp library */
+                } else if (!strcmp(sgwc_key, "cdr")) {
+                    /* handle config in pfcp library */
                 } else
                     ogs_warn("unknown key `%s`", sgwc_key);
             }
@@ -547,14 +549,38 @@ sgwc_bearer_t *sgwc_bearer_add(sgwc_sess_t *sess)
 
     bearer->sgwc_ue = sgwc_ue;
     bearer->sess = sess;
+    
+    ogs_pfcp_urr_t *urr = NULL;
+
+    /* If usage logging enabled create a new URR */
+    if (ogs_pfcp_self()->usageLoggerState.enabled) {
+        urr = ogs_pfcp_urr_add(&sess->pfcp);
+        ogs_assert(urr);
+
+        urr->meas_method = OGS_PFCP_MEASUREMENT_METHOD_DURATION;
+        urr->rep_triggers.time_threshold = 1;
+        urr->time_threshold = ogs_pfcp_self()->usageLoggerState.reporting_period_sec;
+        /* Enable Immediate Start Time Metering */
+        urr->meas_info.istm = 1;
+    }
 
     /* Downlink */
     tunnel = sgwc_tunnel_add(bearer, OGS_GTP2_F_TEID_S5_S8_SGW_GTP_U);
     ogs_assert(tunnel);
 
+    /* Associate URR with downlink PDR */    
+    if (ogs_pfcp_self()->usageLoggerState.enabled) {
+        ogs_pfcp_pdr_associate_urr(tunnel->pdr, urr);
+    }
+
     /* Uplink */
     tunnel = sgwc_tunnel_add(bearer, OGS_GTP2_F_TEID_S1_U_SGW_GTP_U);
     ogs_assert(tunnel);
+
+    /* Associate URR with uplink PDR */    
+    if (ogs_pfcp_self()->usageLoggerState.enabled) {
+        ogs_pfcp_pdr_associate_urr(tunnel->pdr, urr);
+    }
 
     ogs_list_add(&sess->bearer_list, bearer);
 

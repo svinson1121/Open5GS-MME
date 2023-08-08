@@ -348,6 +348,67 @@ int ogs_pfcp_context_parse_config(const char *local, const char *remote)
                                 NULL, self.pfcp_port, NULL);
                         ogs_assert(rv == OGS_OK);
                     }
+                } else if (!strcmp(local_key, "cdr")) {
+                    ogs_yaml_iter_t cdr_iter;
+                    ogs_yaml_iter_recurse(&local_iter, &cdr_iter);
+
+                    /* Set defaults */
+                    self.usageLoggerState.enabled = false;
+                    self.usageLoggerState.file_capture_period_sec = 1800;
+                    self.usageLoggerState.reporting_period_sec = 10;
+                    strncpy(self.usageLoggerState.sgw_name, "undefined", SGW_NAME_STR_MAX_LEN - 1);
+                    strncpy(self.usageLoggerState.log_dir, "/var/log/open5gs", LOG_DIR_STR_MAX_LEN - 1);
+
+                    while (ogs_yaml_iter_next(&cdr_iter)) {
+                        const char *cdr_key = ogs_yaml_iter_key(&cdr_iter);
+                        ogs_assert(cdr_key);
+
+                        if (!strcmp(cdr_key, "enabled")) {
+                            bool enabled = false;
+                            const char *cdr_enabled = ogs_yaml_iter_value(&cdr_iter);
+
+                            if (!strcmp("True", cdr_enabled) || 
+                                !strcmp("true", cdr_enabled)) {
+                                ogs_info("CDR functionality has been enabled");
+                                enabled = true;
+                            }
+                            else {
+                                enabled = false;
+                            }
+                            self.usageLoggerState.enabled = enabled;
+                        } else if (!strcmp(cdr_key, "file_capture_period_sec")) {
+                            int file_capture_period_sec = 0;
+                            const char *file_capture_period_sec_str = ogs_yaml_iter_value(&cdr_iter);
+                            if (file_capture_period_sec_str)
+                                file_capture_period_sec = atoi(file_capture_period_sec_str);
+
+                            if (0 < file_capture_period_sec) {
+                                self.usageLoggerState.file_capture_period_sec = (unsigned)file_capture_period_sec;
+                            }
+                        } else if (!strcmp(cdr_key, "reporting_period_sec")) {
+                            int reporting_period_sec = 0;
+                            const char *reporting_period_sec_str = ogs_yaml_iter_value(&cdr_iter);
+                            if (reporting_period_sec_str)
+                                reporting_period_sec = atoi(reporting_period_sec_str);
+
+                            if (0 < reporting_period_sec) {
+                                self.usageLoggerState.reporting_period_sec = (unsigned)reporting_period_sec;
+                            }
+                        } else if (!strcmp(cdr_key, "sgw_name")) {
+                            const char *cdr_sgw_name = ogs_yaml_iter_value(&cdr_iter);
+
+                            if (cdr_sgw_name)
+                                strncpy(self.usageLoggerState.sgw_name, cdr_sgw_name, SGW_NAME_STR_MAX_LEN - 1);
+                        } else if (!strcmp(cdr_key, "log_dir")) {
+                            const char *cdr_log_dir = ogs_yaml_iter_value(&cdr_iter);
+
+                            if (cdr_log_dir)
+                                strncpy(self.usageLoggerState.log_dir, cdr_log_dir, LOG_DIR_STR_MAX_LEN - 1);
+
+                        } else {
+                            ogs_warn("unknown key `%s`", cdr_key);
+                        }
+                    }
                 } else if (!strcmp(local_key, "subnet")) {
                     ogs_yaml_iter_t subnet_array, subnet_iter;
                     ogs_yaml_iter_recurse(&local_iter, &subnet_array);

@@ -220,6 +220,38 @@ void sgwc_s11_handle_create_session_request(
         return;
     }
 
+    /* Set MSISDN */
+    if (req->msisdn.presence) {
+        sgwc_ue->msisdn_len = req->msisdn.len;
+        memcpy(sgwc_ue->msisdn, req->msisdn.data, sgwc_ue->msisdn_len);
+        ogs_buffer_to_bcd(sgwc_ue->msisdn, sgwc_ue->msisdn_len, sgwc_ue->msisdn_bcd);
+    }
+
+    /* Set IMEI(SV) */
+    if (req->me_identity.presence) {
+        sgwc_ue->imeisv_len = req->me_identity.len;
+        memcpy(sgwc_ue->imeisv, req->me_identity.data, sgwc_ue->imeisv_len);
+        ogs_buffer_to_bcd(sgwc_ue->imeisv, sgwc_ue->imeisv_len, sgwc_ue->imeisv_bcd);
+    }
+
+    /* Set UE Timezone */
+    if (req->ue_time_zone.presence) {
+        sgwc_ue->timezone_raw_len = req->ue_time_zone.len;
+        memcpy(sgwc_ue->timezone_raw, req->ue_time_zone.data, sgwc_ue->timezone_raw_len);
+    }
+
+    /* PDA Address Allocation (PAA) */
+    if (req->pdn_address_allocation.presence) {
+        sgwc_ue->ue_ip_raw_len = req->pdn_address_allocation.len;
+        memcpy(sgwc_ue->ue_ip_raw, req->pdn_address_allocation.data, sgwc_ue->ue_ip_raw_len);
+    }
+
+    /* PGW IP address */
+    if (req->pgw_s5_s8_address_for_control_plane_or_pmip.presence) {
+        sgwc_ue->pgw_ip_raw_len = req->pgw_s5_s8_address_for_control_plane_or_pmip.len;
+        memcpy(sgwc_ue->pgw_ip_raw, req->pgw_s5_s8_address_for_control_plane_or_pmip.data, sgwc_ue->pgw_ip_raw_len);
+    }
+
     /* Add Session */
     ogs_assert(0 < ogs_fqdn_parse(apn,
             req->access_point_name.data,
