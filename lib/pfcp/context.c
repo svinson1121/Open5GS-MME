@@ -1263,6 +1263,12 @@ void ogs_pfcp_pdr_remove(ogs_pfcp_pdr_t *pdr)
         ogs_free(pdr->ipv6_framed_routes);
     }
 
+    if (0 < pdr->num_of_urr) {
+        for (i = 0; i < pdr->num_of_urr; ++i) {
+            ogs_pfcp_urr_remove(pdr->urr[i]);
+        }
+    }
+
     ogs_pool_free(&ogs_pfcp_pdr_teid_pool, pdr->teid_node);
     ogs_pool_free(&ogs_pfcp_pdr_pool, pdr);
 }
