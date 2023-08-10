@@ -2805,7 +2805,6 @@ void mme_ue_remove(mme_ue_t *mme_ue)
     if (0 != mme_ue->imsi_len) {
         ogs_hash_set(mme_self()->imsi_ue_hash,
                 mme_ue->imsi, mme_ue->imsi_len, NULL);
-        mme_metrics_ue_connected_clear(mme_ue->imsi_bcd);
     }
 
     if (mme_ue->current.m_tmsi) {
