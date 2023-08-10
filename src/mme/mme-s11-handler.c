@@ -447,6 +447,9 @@ void mme_s11_handle_create_session_response(
         ogs_fatal("Invalid Create Session Action[%d]", create_action);
         ogs_assert_if_reached();
     }
+
+    /* If we get to here than that means the session was added successfully */
+    mme_metrics_ue_session_add(mme_ue->imsi_bcd, sess->session->name);
 }
 
 void mme_s11_handle_modify_bearer_response(

@@ -2243,7 +2243,7 @@ mme_enb_t *mme_enb_add(ogs_sock_t *sock, ogs_sockaddr_t *addr)
 
     char buf[OGS_ADDRSTRLEN];
     OGS_ADDR(addr, buf);
-    mme_metrics_connected_enb_inc(buf);
+    mme_metrics_connected_enb_add(buf);
 
     ogs_info("[Added] Number of eNBs is now %d",
             ogs_list_count(&self.enb_list));
@@ -2276,10 +2276,10 @@ int mme_enb_remove(mme_enb_t *enb)
      */
     char buf[OGS_ADDRSTRLEN];
     OGS_ADDR(enb->sctp.addr, buf);
-    mme_metrics_connected_enb_dec(buf);
+    mme_metrics_connected_enb_clear(buf);
     char cell_id[16] = ""; // todo give this a real number
     sprintf(cell_id, "%u", enb->enb_id);
-    mme_metrics_connected_enb_id_dec(MME_METR_LOCAL_GAUGE_ENB_ID, buf, cell_id);
+    mme_metrics_connected_enb_id_clear(buf, cell_id);
 
     ogs_sctp_flush_and_destroy(&enb->sctp);
 

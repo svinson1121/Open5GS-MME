@@ -228,6 +228,12 @@ int sgsap_send_service_request(mme_ue_t *mme_ue, uint8_t emm_mode)
     rv = sgsap_send_to_vlr(mme_ue, pkbuf);
     ogs_expect(rv == OGS_OK);
 
+    if (SGSAP_EMM_IDLE_MODE == emm_mode) {
+        mme_metrics_ue_idle_add(mme_ue->imsi_bcd);
+    } else {
+        mme_metrics_ue_idle_clear(mme_ue->imsi_bcd);
+    }
+
     return rv;
 }
 

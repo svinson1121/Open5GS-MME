@@ -28,9 +28,14 @@ static inline void mme_metrics_inst_global_inc(mme_metric_type_global_t t)
 static inline void mme_metrics_inst_global_dec(mme_metric_type_global_t t)
 { ogs_metrics_inst_dec(mme_metrics_inst_global[t]); }
 
+/* Things that have dynamic labels such as ip
+ * addresses - not known at initialisation time */
 typedef enum mme_metric_type_local_s {
     MME_METR_LOCAL_GAUGE_ENB,
     MME_METR_LOCAL_GAUGE_ENB_ID,
+    MME_METR_LOCAL_GAUGE_MME_UE_SESSION,
+    MME_METR_LOCAL_GAUGE_MME_UE_CONNECTED,
+    MME_METR_LOCAL_GAUGE_MME_UE_IDLE,
     _MME_METR_LOCAL_MAX,
 } mme_metric_type_local_t;
 
@@ -38,11 +43,20 @@ int mme_metrics_init_inst_local(void);
 int mme_metrics_free_inst_local(void);
 void mme_metrics_init_local(void);
 
-void mme_metrics_connected_enb_inc(char *ip_address);
-void mme_metrics_connected_enb_dec(char *ip_address);
+void mme_metrics_connected_enb_add(char *ip_address);
+void mme_metrics_connected_enb_clear(char *ip_address);
 
-void mme_metrics_connected_enb_id_inc(mme_metric_type_local_t t, char* ip_address, char* cell_id);
-void mme_metrics_connected_enb_id_dec(mme_metric_type_local_t t, char* ip_address, char* cell_id);
+void mme_metrics_connected_enb_id_add(char* ip_address, char* cell_id);
+void mme_metrics_connected_enb_id_clear(char* ip_address, char* cell_id);
+
+void mme_metrics_ue_session_add(char* imsi, char* apn);
+void mme_metrics_ue_session_clear(char* imsi, char* apn);
+
+void mme_metrics_ue_connected_add(char* imsi);
+void mme_metrics_ue_connected_clear(char* imsi);
+
+void mme_metrics_ue_idle_add(char* imsi);
+void mme_metrics_ue_idle_clear(char* imsi);
 
 void mme_metrics_init(void);
 void mme_metrics_final(void);

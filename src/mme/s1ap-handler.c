@@ -197,7 +197,7 @@ void s1ap_handle_s1_setup_request(mme_enb_t *enb, ogs_s1ap_message_t *message)
     OGS_ADDR(enb->sctp.addr, ip);
     char cell_id[16] = ""; // todo give this a real number
     sprintf(cell_id, "%u", enb_id);
-    mme_metrics_connected_enb_id_inc(MME_METR_LOCAL_GAUGE_ENB_ID, ip, cell_id);
+    mme_metrics_connected_enb_id_add(ip, cell_id);
 
     enb->state.s1_setup_success = true;
     r = s1ap_send_s1_setup_response(enb);
@@ -1533,6 +1533,7 @@ void s1ap_handle_ue_context_release_action(enb_ue_t *enb_ue)
             enb_ue->enb_ue_s1ap_id, enb_ue->mme_ue_s1ap_id);
     if (mme_ue) {
         ogs_info("    IMSI[%s]", mme_ue->imsi_bcd);
+        mme_metrics_ue_connected_clear(mme_ue->imsi_bcd);
 
         /*
          * An assert occurs when a NAS message retransmission occurs.
