@@ -2802,9 +2802,11 @@ void mme_ue_remove(mme_ue_t *mme_ue)
     ogs_assert(mme_ue->sgw_ue);
     sgw_ue_remove(mme_ue->sgw_ue);
 
-    if (mme_ue->imsi_len != 0)
+    if (0 != mme_ue->imsi_len) {
         ogs_hash_set(mme_self()->imsi_ue_hash,
                 mme_ue->imsi, mme_ue->imsi_len, NULL);
+        mme_metrics_ue_connected_clear(mme_ue->imsi_bcd);
+    }
 
     if (mme_ue->current.m_tmsi) {
         ogs_hash_set(self.guti_ue_hash,

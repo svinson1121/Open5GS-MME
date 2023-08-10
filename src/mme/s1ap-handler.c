@@ -1533,7 +1533,6 @@ void s1ap_handle_ue_context_release_action(enb_ue_t *enb_ue)
             enb_ue->enb_ue_s1ap_id, enb_ue->mme_ue_s1ap_id);
     if (mme_ue) {
         ogs_info("    IMSI[%s]", mme_ue->imsi_bcd);
-        mme_metrics_ue_connected_clear(mme_ue->imsi_bcd);
 
         /*
          * An assert occurs when a NAS message retransmission occurs.
