@@ -335,6 +335,7 @@ void s1ap_handle_initial_ue_message(mme_enb_t *enb, ogs_s1ap_message_t *message)
                     ogs_expect(r == OGS_OK);
                     ogs_assert(r != OGS_ERROR);
                 }
+                mme_metrics_ue_idle_clear(mme_ue->imsi_bcd);
                 enb_ue_associate_mme_ue(enb_ue, mme_ue);
                 ogs_debug("Mobile Reachable timer stopped for IMSI[%s]",
                     mme_ue->imsi_bcd);
@@ -397,8 +398,6 @@ void s1ap_handle_initial_ue_message(mme_enb_t *enb, ogs_s1ap_message_t *message)
     r = s1ap_send_to_nas(enb_ue,
             S1AP_ProcedureCode_id_initialUEMessage, NAS_PDU);
     ogs_expect(r == OGS_OK);
-
-    mme_metrics_ue_idle_clear(mme_ue->imsi_bcd);
 }
 
 void s1ap_handle_uplink_nas_transport(
@@ -1431,8 +1430,9 @@ void s1ap_handle_ue_context_release_request(
             Cause->present, (int)Cause->choice.radioNetwork);
 
     if ((S1AP_Cause_PR_radioNetwork == Cause->present) && 
-        (20 == (int)Cause->choice.radioNetwork)) {
-        mme_metrics_ue_idle_add(mme_ue->imsi_bcd);
+        (20 == (int)Cause->choice.radioNetwork)        &&
+        (NULL != enb_ue->mme_ue)) {
+        mme_metrics_ue_idle_add(enb_ue->mme_ue->imsi_bcd);
     }
 
     switch (Cause->present) {
