@@ -583,6 +583,34 @@ void smf_gx_send_ccr(smf_sess_t *sess, ogs_gtp_xact_t *xact,
         ret = fd_msg_avp_new(ogs_diam_gx_online, 0, &avp);
         ogs_assert(ret == 0);
         val.u32 = OGS_DIAM_GX_DISABLE_ONLINE;
+
+        bool enable_online = false;
+        if (((SMF_CTF_ENABLED_AUTO == smf_self()->ctf_config.enabled)) ||
+            ((SMF_CTF_ENABLED_YES == smf_self()->ctf_config.enabled))) {
+            int i = 0;
+
+            /* Charge unless an APN whitelist was specified */
+            enable_online = true;
+
+            for (i = 0; i < smf_self()->ctf_config.num_online_charging_apns; ++i) {
+                enable_online = false;
+                char* apn = smf_self()->ctf_config.online_charging_apns[i];
+
+                if (!strcmp(apn, sess->session.name)) {
+                    enable_online = true;
+                    break;
+                }
+            }
+        }
+
+        if (enable_online) {
+            ogs_debug("Enabling online charging for APN '%s'", sess->session.name);
+            val.u32 = OGS_DIAM_GX_ENABLE_ONLINE;
+        } else {
+            ogs_debug("Disabling online charging for APN '%s'", sess->session.name);
+            val.u32 = OGS_DIAM_GX_DISABLE_ONLINE;
+        }
+
         ret = fd_msg_avp_setvalue(avp, &val);
         ogs_assert(ret == 0);
         ret = fd_msg_avp_add(req, MSG_BRW_LAST_CHILD, avp);

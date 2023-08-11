@@ -442,10 +442,15 @@ sbi:
 #    o yes:  Use Gy always;
 #            reject subscribers if no OCS available among Diameter peers
 #    o no:   Don't use Gy interface if there is an OCS available
+#  o online_charging_apns (when enabled is either 'yes', or 'auto'):
+#    o whitelist of APNs: Enables online charging for only these APNs.
+#                         Max number of APNs is 8, with a string size of less than 32 characters
+#    o Nothing / key not included: Enables online charging for all APNs
 #
 #  smf:
 #    ctf:
 #      enabled: auto|yes|no
+#      online_charging_apns: ['internet', 'ims', 'sos']
 #
 #
 #  <SMF Selection - 5G Core only>

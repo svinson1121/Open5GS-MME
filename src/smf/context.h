@@ -58,8 +58,13 @@ typedef enum {
     SMF_CTF_ENABLED_NO,
 } smf_ctf_enabled_mode_e;
 
+enum { MAX_ONLINE_CHARGING_APNS = 8,
+       MAX_ONLINE_CHARGING_APNS_STR = 32 };
+
 typedef struct smf_ctf_config_s {
     smf_ctf_enabled_mode_e enabled;
+    char online_charging_apns[MAX_ONLINE_CHARGING_APNS][MAX_ONLINE_CHARGING_APNS_STR];
+    size_t num_online_charging_apns;
 } smf_ctf_config_t;
 
 int smf_ctf_config_init(smf_ctf_config_t *ctf_config);
