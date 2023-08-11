@@ -582,6 +582,7 @@ void smf_gx_send_ccr(smf_sess_t *sess, ogs_gtp_xact_t *xact,
         /* Set Online to DISABLE */
         ret = fd_msg_avp_new(ogs_diam_gx_online, 0, &avp);
         ogs_assert(ret == 0);
+        val.u32 = OGS_DIAM_GX_DISABLE_ONLINE;
 
         bool enable_online = false;
         if (((SMF_CTF_ENABLED_AUTO == smf_self()->ctf_config.enabled)) ||
