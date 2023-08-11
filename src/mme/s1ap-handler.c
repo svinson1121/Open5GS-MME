@@ -397,7 +397,6 @@ void s1ap_handle_initial_ue_message(mme_enb_t *enb, ogs_s1ap_message_t *message)
     r = s1ap_send_to_nas(enb_ue,
             S1AP_ProcedureCode_id_initialUEMessage, NAS_PDU);
     ogs_expect(r == OGS_OK);
-    ogs_assert(r != OGS_ERROR);
 }
 
 void s1ap_handle_uplink_nas_transport(
