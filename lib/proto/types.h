@@ -28,7 +28,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#define OGS_MAX_NUM_OF_SESS             8   /* Num of APN(Session) per UE */
+#define OGS_MAX_NUM_OF_SESS             10  /* Num of APN(Session) per UE */
 #define OGS_MAX_NUM_OF_BEARER           4   /* Num of Bearer per Session */
 #define OGS_BEARER_PER_UE               8   /* Num of Bearer per UE */
 #define OGS_MAX_NUM_OF_PACKET_BUFFER    64  /* Num of PacketBuffer per UE */
@@ -64,6 +64,9 @@ extern "C" {
 #define OGS_MAX_IMSI_LEN                \
     OGS_BCD_TO_BUFFER_LEN(OGS_MAX_IMSI_BCD_LEN)
 
+#define OGS_MAX_TIMEZONE_RAW_LEN        16
+#define OGS_MAX_IP_RAW_LEN              16
+
 #define OGS_MAX_IMEISV_BCD_LEN          16
 #define OGS_MAX_IMEISV_LEN              \
     OGS_BCD_TO_BUFFER_LEN(OGS_MAX_IMEISV_BCD_LEN)
@@ -80,6 +83,7 @@ extern "C" {
 #define OGS_MAX_DNN_LEN                 100
 #define OGS_MAX_APN_LEN                 OGS_MAX_DNN_LEN
 #define OGS_MAX_PCO_LEN                 251
+#define OGS_MAX_EPCO_LEN                65535
 #define OGS_MAX_FQDN_LEN                256
 
 #define OGS_MAX_NUM_OF_SERVED_GUAMI     8

@@ -43,6 +43,7 @@ libmme_sources = files('''
     mme-sm.h
     mme-path.h
     metrics.h 
+    mme-redis.h
 
     mme-init.c
     mme-event.c
@@ -77,10 +78,8 @@ libmme_sources = files('''
     mme-path.c 
     sbc-handler.c 
     metrics.c
+    mme-redis.c
 '''.split())
-
-libhiredis_dep = cc.find_library('hiredis', dirs: '/usr/include/hiredis', required: true)
-libhiredis_inc = include_directories('/usr/include/hiredis')
 
 libmme = static_library('mme',
     sources : libmme_sources,
@@ -91,8 +90,8 @@ libmme = static_library('mme',
                     libdiameter_s6a_dep,
                     libdiameter_s13_dep,
                     libgtp_dep,
-                    libdnsresolvers_dep],
-    include_directories : libhiredis_inc,
+                    libdnsresolvers_dep,
+                    libredis_dep],
     install : false)
 
 libmme_dep = declare_dependency(
@@ -104,8 +103,8 @@ libmme_dep = declare_dependency(
                     libdiameter_s6a_dep,
                     libdiameter_s13_dep,
                     libgtp_dep,
-                    libhiredis_dep,
-                    libdnsresolvers_dep])
+                    libdnsresolvers_dep,
+                    libredis_dep])
 
 mme_sources = files('''
     app-init.c

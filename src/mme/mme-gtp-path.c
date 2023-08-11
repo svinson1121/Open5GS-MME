@@ -341,6 +341,9 @@ int mme_gtp_send_delete_session_request(
     rv = ogs_gtp_xact_commit(xact);
     ogs_expect(rv == OGS_OK);
 
+    /* If we make it here than that means we have successfully sent the delete session */
+    mme_metrics_ue_session_clear(mme_ue->imsi_bcd, sess->session->name);
+
     return rv;
 }
 

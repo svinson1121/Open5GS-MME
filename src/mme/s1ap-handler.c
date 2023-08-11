@@ -193,6 +193,12 @@ void s1ap_handle_s1_setup_request(mme_enb_t *enb, ogs_s1ap_message_t *message)
         return;
     }
 
+    char ip[OGS_ADDRSTRLEN];
+    OGS_ADDR(enb->sctp.addr, ip);
+    char cell_id[16] = ""; // todo give this a real number
+    sprintf(cell_id, "%u", enb_id);
+    mme_metrics_connected_enb_id_add(ip, cell_id);
+
     enb->state.s1_setup_success = true;
     r = s1ap_send_s1_setup_response(enb);
     ogs_expect(r == OGS_OK);
@@ -329,6 +335,7 @@ void s1ap_handle_initial_ue_message(mme_enb_t *enb, ogs_s1ap_message_t *message)
                     ogs_expect(r == OGS_OK);
                     ogs_assert(r != OGS_ERROR);
                 }
+                mme_metrics_ue_idle_clear(mme_ue->imsi_bcd);
                 enb_ue_associate_mme_ue(enb_ue, mme_ue);
                 ogs_debug("Mobile Reachable timer stopped for IMSI[%s]",
                     mme_ue->imsi_bcd);
@@ -391,7 +398,6 @@ void s1ap_handle_initial_ue_message(mme_enb_t *enb, ogs_s1ap_message_t *message)
     r = s1ap_send_to_nas(enb_ue,
             S1AP_ProcedureCode_id_initialUEMessage, NAS_PDU);
     ogs_expect(r == OGS_OK);
-    ogs_assert(r != OGS_ERROR);
 }
 
 void s1ap_handle_uplink_nas_transport(
@@ -551,7 +557,6 @@ void s1ap_handle_uplink_nas_transport(
     r = s1ap_send_to_nas(enb_ue,
             S1AP_ProcedureCode_id_uplinkNASTransport, NAS_PDU);
     ogs_expect(r == OGS_OK);
-    ogs_assert(r != OGS_ERROR);
 }
 
 void s1ap_handle_ue_capability_info_indication(
@@ -1424,6 +1429,12 @@ void s1ap_handle_ue_context_release_request(
     ogs_debug("    Cause[Group:%d Cause:%d]",
             Cause->present, (int)Cause->choice.radioNetwork);
 
+    if ((S1AP_Cause_PR_radioNetwork == Cause->present) && 
+        (20 == (int)Cause->choice.radioNetwork)        &&
+        (NULL != enb_ue->mme_ue)) {
+        mme_metrics_ue_idle_add(enb_ue->mme_ue->imsi_bcd);
+    }
+
     switch (Cause->present) {
     case S1AP_Cause_PR_radioNetwork:
     case S1AP_Cause_PR_transport:
@@ -1652,7 +1663,6 @@ void s1ap_handle_ue_context_release_action(enb_ue_t *enb_ue)
 
         r = s1ap_send_paging(mme_ue, S1AP_CNDomain_ps);
         ogs_expect(r == OGS_OK);
-        ogs_assert(r != OGS_ERROR);
         break;
     default:
         ogs_error("Invalid Action[%d]", enb_ue->ue_ctx_rel_action);

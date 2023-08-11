@@ -156,7 +156,6 @@ void emm_state_registered(ogs_fsm_t *s, mme_event_t *e)
                  */
                 r = s1ap_send_paging(mme_ue, 0);
                 ogs_expect(r == OGS_OK);
-                ogs_assert(r != OGS_ERROR);
             }
             break;
 

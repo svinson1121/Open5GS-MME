@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2022 by Sukchan Lee <acetcom@gmail.com>
+ * Copyright (C) 2019-2023 by Sukchan Lee <acetcom@gmail.com>
  *
  * This file is part of Open5GS.
  *
@@ -58,9 +58,24 @@ typedef enum {
     SMF_CTF_ENABLED_NO,
 } smf_ctf_enabled_mode_e;
 
+enum { MAX_ONLINE_CHARGING_APNS = 8,
+       MAX_ONLINE_CHARGING_APNS_STR = 32 };
+
 typedef struct smf_ctf_config_s {
     smf_ctf_enabled_mode_e enabled;
+    char online_charging_apns[MAX_ONLINE_CHARGING_APNS][MAX_ONLINE_CHARGING_APNS_STR];
+    size_t num_online_charging_apns;
 } smf_ctf_config_t;
+
+typedef struct {
+    char address[16];
+    unsigned port;
+} redis_server_config_t;
+
+typedef struct {
+    bool enabled;
+    unsigned ip_hold_time_sec;
+} redis_ip_reuse_t;
 
 int smf_ctf_config_init(smf_ctf_config_t *ctf_config);
 
@@ -88,6 +103,7 @@ typedef struct smf_context_s {
     ogs_hash_t      *imsi_hash;     /* hash table (IMSI) */
     ogs_hash_t      *ipv4_hash;     /* hash table (IPv4 Address) */
     ogs_hash_t      *ipv6_hash;     /* hash table (IPv6 Address) */
+    ogs_hash_t      *smf_n4_seid_hash; /* hash table (SMF-N4-SEID) */
     ogs_hash_t      *n1n2message_hash; /* hash table (N1N2Message Location) */
 
     uint16_t        mtu;            /* MTU to advertise in PCO */
@@ -102,6 +118,10 @@ typedef struct smf_context_s {
 #define SMF_UE_IS_LAST_SESSION(__sMF) \
      ((__sMF) && (ogs_list_count(&(__sMF)->sess_list)) == 1)
     ogs_list_t      smf_ue_list;
+
+    /* Redis configs */
+    redis_server_config_t redis_server_config;
+    redis_ip_reuse_t redis_ip_reuse;
 } smf_context_t;
 
 typedef struct smf_gtp_node_s {
@@ -173,8 +193,6 @@ typedef struct smf_bearer_s {
     ogs_lnode_t     to_modify_node;
     ogs_lnode_t     to_delete_node;
 
-    uint32_t        index;
-
     ogs_pfcp_pdr_t  *dl_pdr;
     ogs_pfcp_pdr_t  *ul_pdr;
     ogs_pfcp_far_t  *dl_far;
@@ -215,7 +233,10 @@ typedef struct smf_bearer_s {
 #define SMF_SESS(pfcp_sess) ogs_container_of(pfcp_sess, smf_sess_t, pfcp)
 typedef struct smf_sess_s {
     ogs_sbi_object_t sbi;
-    uint32_t        index;          /**< An index of this node */
+
+    uint32_t        index;              /* An index of this node */
+    ogs_pool_id_t   *smf_n4_seid_node;  /* A node of SMF-N4-SEID */
+
     ogs_fsm_t       sm;             /* A state machine */
     struct {
         bool gx_ccr_init_in_flight; /* Waiting for Gx CCA */
@@ -236,12 +257,12 @@ typedef struct smf_sess_s {
 
     uint64_t        smpolicycontrol_features; /* SBI features */
 
-    uint32_t        smf_n4_teid;    /* SMF-N4-TEID is derived from INDEX */
+    uint32_t        smf_n4_teid;    /* SMF-N4-TEID is derived from NODE */
 
     uint32_t        sgw_s5c_teid;   /* SGW-S5C-TEID is received from SGW */
     ogs_ip_t        sgw_s5c_ip;     /* SGW-S5C IPv4/IPv6 */
 
-    uint64_t        smf_n4_seid;    /* SMF SEID is dervied from INDEX */
+    uint64_t        smf_n4_seid;    /* SMF SEID is dervied from NODE */
     uint64_t        upf_n4_seid;    /* UPF SEID is received from Peer */
 
     uint32_t        upf_n3_teid;    /* UPF-N3 TEID */
@@ -323,6 +344,7 @@ typedef struct smf_sess_s {
     struct {
         uint8_t version; /* GTPC version */
         ogs_tlv_octet_t ue_pco;
+        ogs_tlv_octet_t ue_epco;
         ogs_tlv_octet_t user_location_information;
         ogs_tlv_octet_t ue_timezone;
         ogs_tlv_octet_t charging_characteristics;
@@ -352,7 +374,7 @@ typedef struct smf_sess_s {
     } gy;
 
     struct {
-        ogs_nas_extended_protocol_configuration_options_t ue_pco;
+        ogs_nas_extended_protocol_configuration_options_t ue_epco;
     } nas; /* Saved from NAS-5GS */
 
     struct {
@@ -463,9 +485,6 @@ smf_sess_t *smf_sess_find_by_ipv4(uint32_t addr);
 smf_sess_t *smf_sess_find_by_ipv6(uint32_t *addr6);
 smf_sess_t *smf_sess_find_by_paging_n1n2message_location(
         char *n1n2message_location);
-smf_sess_t *smf_sess_find_by_error_indication_report(
-        smf_ue_t *smf_ue,
-        ogs_pfcp_tlv_error_indication_report_t *error_indication_report);
 
 void smf_sess_create_indirect_data_forwarding(smf_sess_t *sess);
 bool smf_sess_have_indirect_data_forwarding(smf_sess_t *sess);
