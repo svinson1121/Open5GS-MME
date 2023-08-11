@@ -820,7 +820,10 @@ void smf_gsm_state_operational(ogs_fsm_t *s, smf_event_t *e)
             }
             break;
         case OGS_GTP2_CREATE_SESSION_REQUEST_TYPE:
-            /* Clobber the old sess with this new one */
+            ogs_info("Clobbering existing session with new one [IMSI:%s, APN:%s]",
+                sess->smf_ue->imsi_bcd,
+                sess->session.name
+            );
             gtp2_cause = smf_s5c_handle_create_session_request(sess,
                             e->gtp_xact,
                             &e->gtp2_message->create_session_request);

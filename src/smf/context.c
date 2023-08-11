@@ -20,6 +20,7 @@
 #include "context.h"
 #include "gtp-path.h"
 #include "pfcp-path.h"
+#include "smf-redis.h"
 
 static smf_context_t self;
 static ogs_diam_config_t g_diam_conf;
@@ -964,6 +965,51 @@ int smf_context_parse_config(void)
                     /* handle config in sbi library */
                 } else if (!strcmp(smf_key, "metrics")) {
                     /* handle config in metrics library */
+                } else if (!strcmp(smf_key, "redis_server")) {
+                    ogs_yaml_iter_t redis_iter;
+                    ogs_yaml_iter_recurse(&smf_iter, &redis_iter);
+
+                    while (ogs_yaml_iter_next(&redis_iter)) {
+                    ogs_info("redis_server");
+                        const char *redis_server_config_key = ogs_yaml_iter_key(&redis_iter);
+                        ogs_assert(redis_server_config_key);
+                        if (!strcmp(redis_server_config_key, "addr")) {
+                            const char *redis_addr = ogs_yaml_iter_value(&redis_iter);
+                            strncpy(self.redis_server_config.address, redis_addr, 16);
+                        } else if (!strcmp(redis_server_config_key, "port")) {
+                            const char *redis_port = ogs_yaml_iter_value(&redis_iter);
+
+                            if (redis_port)
+                                self.redis_server_config.port = atoi(redis_port);
+                        } else
+                            ogs_warn("unknown key `%s`", smf_key);
+                    }
+                } else if (!strcmp(smf_key, "redis_ip_reuse")) {
+                    ogs_yaml_iter_t redis_ip_reuse_iter;
+                    ogs_yaml_iter_recurse(&smf_iter, &redis_ip_reuse_iter);
+
+                    while (ogs_yaml_iter_next(&redis_ip_reuse_iter)) {
+                        const char *redis_ip_reuse_key = ogs_yaml_iter_key(&redis_ip_reuse_iter);
+                        ogs_assert(redis_ip_reuse_key);
+
+                        if (!strcmp(redis_ip_reuse_key, "enabled")) {
+                            const char *redis_ip_reuse_enabled = ogs_yaml_iter_value(&redis_ip_reuse_iter);
+                            if (!strcmp("True", redis_ip_reuse_enabled) ||
+                                !strcmp("true", redis_ip_reuse_enabled)) {
+                                ogs_info("Redis ip reuse functionality has been enabled");
+                                self.redis_ip_reuse.enabled = true;
+                            }
+                            else {
+                                self.redis_ip_reuse.enabled = false;
+                            }
+                        } else if (!strcmp(redis_ip_reuse_key, "hold_time_sec")) {
+                            const char *redis_ip_hold_time_sec = ogs_yaml_iter_value(&redis_ip_reuse_iter);
+                            if (redis_ip_hold_time_sec) {
+                                self.redis_ip_reuse.ip_hold_time_sec = atoi(redis_ip_hold_time_sec);
+                            }
+                        } else
+                            ogs_warn("unknown key `%s`", smf_key);
+                    }
                 } else
                     ogs_warn("unknown key `%s`", smf_key);
             }
@@ -1560,6 +1606,17 @@ uint8_t smf_sess_set_ue_ip(smf_sess_t *sess)
     if (sess->ipv4) {
         ogs_hash_set(smf_self()->ipv4_hash,
                 sess->ipv4->addr, OGS_IPV4_LEN, NULL);
+        if (smf_self()->redis_ip_reuse.enabled) {
+            if (!redis_ip_recycle(sess->smf_ue->imsi_bcd, sess->session.name, sess->ipv4->addr[0])) {
+                ogs_fatal("Failed to recycle IP");
+            } else {
+                char *recycled_ip_str = ogs_ipv4_to_string(sess->ipv4->addr[0]);
+                ogs_debug("IP '%s' has successfully entered the recycling process", recycled_ip_str);
+                ogs_free(recycled_ip_str);
+            }
+
+            ogs_debug("Number of available IPs on redis is now %i", redis_get_num_available_ips());
+        }
         ogs_pfcp_ue_ip_free(sess->ipv4);
     }
     if (sess->ipv6) {
@@ -1569,8 +1626,13 @@ uint8_t smf_sess_set_ue_ip(smf_sess_t *sess)
     }
 
     if (sess->session.session_type == OGS_PDU_SESSION_TYPE_IPV4) {
-        sess->ipv4 = ogs_pfcp_ue_ip_alloc(&cause_value, AF_INET,
-                sess->session.name, (uint8_t *)&sess->session.ue_ip.addr);
+        if (smf_self()->redis_ip_reuse.enabled) {
+            sess->ipv4 = redis_ue_ip_alloc(sess->smf_ue->imsi_bcd, sess->session.name);
+            ogs_debug("Number of available IPs on redis is now %i", redis_get_num_available_ips());
+        } else {
+            sess->ipv4 = ogs_pfcp_ue_ip_alloc(&cause_value, AF_INET,
+                    sess->session.name, (uint8_t *)&sess->session.ue_ip.addr);
+        }
         if (!sess->ipv4) {
             ogs_error("ogs_pfcp_ue_ip_alloc() failed[%d]", cause_value);
             ogs_assert(cause_value != OGS_PFCP_CAUSE_REQUEST_ACCEPTED);
@@ -1596,8 +1658,13 @@ uint8_t smf_sess_set_ue_ip(smf_sess_t *sess)
         ogs_hash_set(smf_self()->ipv6_hash,
                 sess->ipv6->addr, OGS_IPV6_DEFAULT_PREFIX_LEN >> 3, sess);
     } else if (sess->session.session_type == OGS_PDU_SESSION_TYPE_IPV4V6) {
-        sess->ipv4 = ogs_pfcp_ue_ip_alloc(&cause_value, AF_INET,
-                sess->session.name, (uint8_t *)&sess->session.ue_ip.addr);
+        if (smf_self()->redis_ip_reuse.enabled) {
+            sess->ipv4 = redis_ue_ip_alloc(sess->smf_ue->imsi_bcd, sess->session.name);
+            ogs_debug("Number of available IPs on redis is now %i", redis_get_num_available_ips());
+        } else {
+            sess->ipv4 = ogs_pfcp_ue_ip_alloc(&cause_value, AF_INET,
+                    sess->session.name, (uint8_t *)&sess->session.ue_ip.addr);
+        }
         if (!sess->ipv4) {
             ogs_error("ogs_pfcp_ue_ip_alloc() failed[%d]", cause_value);
             ogs_assert(cause_value != OGS_PFCP_CAUSE_REQUEST_ACCEPTED);
@@ -1702,6 +1769,17 @@ void smf_sess_remove(smf_sess_t *sess)
 
     if (sess->ipv4) {
         ogs_hash_set(self.ipv4_hash, sess->ipv4->addr, OGS_IPV4_LEN, NULL);
+        if (smf_self()->redis_ip_reuse.enabled) {
+            if (!redis_ip_recycle(sess->smf_ue->imsi_bcd, sess->session.name, sess->ipv4->addr[0])) {
+                ogs_fatal("Failed to recycle IP");
+            } else {
+                char *recycled_ip_str = ogs_ipv4_to_string(sess->ipv4->addr[0]);
+                ogs_debug("IP '%s' has successfully entered the recycling process", recycled_ip_str);
+                ogs_free(recycled_ip_str);
+            }
+
+            ogs_debug("Number of available IPs on redis is now %i", redis_get_num_available_ips());
+        }
         ogs_pfcp_ue_ip_free(sess->ipv4);
     }
     if (sess->ipv6) {

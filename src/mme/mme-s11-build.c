@@ -20,6 +20,7 @@
 #include "mme-context.h"
 
 #include "mme-s11-build.h"
+#include "mme-redis.h"
 
 ogs_pkbuf_t *mme_s11_build_create_session_request(
         uint8_t type, mme_sess_t *sess, int create_action)

@@ -434,6 +434,26 @@ sbi:
 #      - 127.0.0.1
 #      - ::1
 #
+# <REDIS IP REUSE>
+#
+# o enabled:
+#   o True : Redis will manage ip assignment 
+#            (i.e. maintain list of used and unused ips)
+#   o False: Default ip assignment from subnet pool
+#
+# o hold_time_sec:
+#   o When a ue session is removed the ip is held 
+#     for this amount of seconds uitil it can be
+#     used by another ue again
+#
+#  redis_server:
+#    addr: "127.0.0.1"
+#    port: 6379
+#
+#  redis_ip_reuse:
+#    enabled: true
+#    hold_time_sec: 5
+#
 #  <CTF>
 #
 #  o Gy interface parameters towards OCS.
