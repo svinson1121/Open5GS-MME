@@ -168,15 +168,14 @@ typedef struct mme_context_s {
     /* Generator for unique identification */
     uint32_t        mme_ue_s1ap_id;         /* mme_ue_s1ap_id generator */
 
-    /* M-TMSI Pool */
-    OGS_POOL(m_tmsi, mme_m_tmsi_t);
-
     ogs_list_t      mme_ue_list;
 
-    ogs_hash_t      *enb_addr_hash;         /* hash table for ENB Address */
-    ogs_hash_t      *enb_id_hash;           /* hash table for ENB-ID */
-    ogs_hash_t      *imsi_ue_hash;          /* hash table (IMSI : MME_UE) */
-    ogs_hash_t      *guti_ue_hash;          /* hash table (GUTI : MME_UE) */
+    ogs_hash_t *enb_addr_hash;  /* hash table for ENB Address */
+    ogs_hash_t *enb_id_hash;    /* hash table for ENB-ID */
+    ogs_hash_t *imsi_ue_hash;   /* hash table (IMSI : MME_UE) */
+    ogs_hash_t *guti_ue_hash;   /* hash table (GUTI : MME_UE) */
+
+    ogs_hash_t *mme_s11_teid_hash;  /* hash table (MME-S11-TEID : MME_UE) */
 
     struct {
         struct {
@@ -320,7 +319,6 @@ struct enb_ue_s {
 
 struct sgw_ue_s {
     ogs_lnode_t     lnode;
-    uint32_t        index;
 
     sgw_ue_t        *source_ue;
     sgw_ue_t        *target_ue;
@@ -405,7 +403,8 @@ struct mme_ue_s {
         ogs_nas_eps_guti_t guti;
     } current, next;
 
-    uint32_t        mme_s11_teid;   /* MME-S11-TEID is derived from INDEX */
+    ogs_pool_id_t   *mme_s11_teid_node; /* A node of MME-S11-TEID */
+    uint32_t        mme_s11_teid;   /* MME-S11-TEID is derived from NODE */
 
     uint16_t        vlr_ostream_id; /* SCTP output stream id for VLR */
 
@@ -676,8 +675,17 @@ typedef struct mme_sess_s {
         uint8_t *buffer;
     } ue_pco;
 
+    /* Save Extended Protocol Configuration Options from UE */
+    struct {
+        uint16_t length;
+        uint8_t *buffer;
+    } ue_epco;
+
     /* Save Protocol Configuration Options from PGW */
     ogs_tlv_octet_t pgw_pco;
+
+    /* Save Extended Protocol Configuration Options from PGW */
+    ogs_tlv_octet_t pgw_epco;
 } mme_sess_t;
 
 #define MME_HAVE_ENB_S1U_PATH(__bEARER) \
@@ -719,7 +727,6 @@ typedef struct mme_bearer_s {
     ogs_lnode_t     lnode;
     ogs_lnode_t     to_modify_node;
 
-    uint32_t        index;
     ogs_fsm_t       sm;             /* State Machine */
 
     uint8_t         *ebi_node;      /* Pool-Node for EPS Bearer ID */
@@ -828,7 +835,6 @@ enb_ue_t *enb_ue_cycle(enb_ue_t *enb_ue);
 sgw_ue_t *sgw_ue_add(mme_sgw_t *sgw);
 void sgw_ue_remove(sgw_ue_t *sgw_ue);
 void sgw_ue_switch_to_sgw(sgw_ue_t *sgw_ue, mme_sgw_t *new_sgw);
-sgw_ue_t *sgw_ue_find(uint32_t index);
 sgw_ue_t *sgw_ue_cycle(sgw_ue_t *sgw_ue);
 
 typedef enum {
@@ -958,7 +964,6 @@ ogs_session_t *mme_emergency_session(mme_ue_t *mme_ue);
 
 int mme_find_served_tai(ogs_eps_tai_t *tai);
 
-int mme_m_tmsi_pool_generate(void);
 mme_m_tmsi_t *mme_m_tmsi_alloc(void);
 int mme_m_tmsi_free(mme_m_tmsi_t *tmsi);
 

@@ -27,18 +27,23 @@ static int context_initialized = 0;
 static OGS_POOL(ogs_pfcp_node_pool, ogs_pfcp_node_t);
 
 static OGS_POOL(ogs_pfcp_sess_pool, ogs_pfcp_sess_t);
-static OGS_POOL(ogs_pfcp_pdr_pool, ogs_pfcp_pdr_t);
 static OGS_POOL(ogs_pfcp_far_pool, ogs_pfcp_far_t);
 static OGS_POOL(ogs_pfcp_urr_pool, ogs_pfcp_urr_t);
 static OGS_POOL(ogs_pfcp_qer_pool, ogs_pfcp_qer_t);
 static OGS_POOL(ogs_pfcp_bar_pool, ogs_pfcp_bar_t);
 
+static OGS_POOL(ogs_pfcp_pdr_pool, ogs_pfcp_pdr_t);
+static OGS_POOL(ogs_pfcp_pdr_teid_pool, ogs_pool_id_t);
+static ogs_pool_id_t *pdr_random_to_index;
+
+static OGS_POOL(ogs_pfcp_rule_pool, ogs_pfcp_rule_t);
+
 static OGS_POOL(ogs_pfcp_dev_pool, ogs_pfcp_dev_t);
 static OGS_POOL(ogs_pfcp_subnet_pool, ogs_pfcp_subnet_t);
-static OGS_POOL(ogs_pfcp_rule_pool, ogs_pfcp_rule_t);
 
 void ogs_pfcp_context_init(void)
 {
+    int i;
     ogs_assert(context_initialized == 0);
 
     /* Initialize SMF context */
@@ -52,8 +57,6 @@ void ogs_pfcp_context_init(void)
 
     ogs_pool_init(&ogs_pfcp_sess_pool, ogs_app()->pool.sess);
 
-    ogs_pool_init(&ogs_pfcp_pdr_pool,
-            ogs_app()->pool.sess * OGS_MAX_NUM_OF_PDR);
     ogs_pool_init(&ogs_pfcp_far_pool,
             ogs_app()->pool.sess * OGS_MAX_NUM_OF_FAR);
     ogs_pool_init(&ogs_pfcp_urr_pool,
@@ -62,6 +65,17 @@ void ogs_pfcp_context_init(void)
             ogs_app()->pool.sess * OGS_MAX_NUM_OF_QER);
     ogs_pool_init(&ogs_pfcp_bar_pool,
             ogs_app()->pool.sess * OGS_MAX_NUM_OF_BAR);
+
+    ogs_pool_init(&ogs_pfcp_pdr_pool,
+            ogs_app()->pool.sess * OGS_MAX_NUM_OF_PDR);
+    ogs_pool_init(&ogs_pfcp_pdr_teid_pool, ogs_pfcp_pdr_pool.size);
+    ogs_pool_random_id_generate(&ogs_pfcp_pdr_teid_pool);
+
+    pdr_random_to_index = ogs_calloc(
+            sizeof(ogs_pool_id_t), ogs_pfcp_pdr_pool.size);
+    ogs_assert(pdr_random_to_index);
+    for (i = 0; i < ogs_pfcp_pdr_pool.size; i++)
+        pdr_random_to_index[ogs_pfcp_pdr_teid_pool.array[i]] = i;
 
     ogs_pool_init(&ogs_pfcp_rule_pool,
             ogs_app()->pool.sess *
@@ -98,8 +112,11 @@ void ogs_pfcp_context_final(void)
     ogs_pool_final(&ogs_pfcp_subnet_pool);
     ogs_pool_final(&ogs_pfcp_rule_pool);
 
-    ogs_pool_final(&ogs_pfcp_sess_pool);
     ogs_pool_final(&ogs_pfcp_pdr_pool);
+    ogs_pool_final(&ogs_pfcp_pdr_teid_pool);
+    ogs_free(pdr_random_to_index);
+
+    ogs_pool_final(&ogs_pfcp_sess_pool);
     ogs_pool_final(&ogs_pfcp_far_pool);
     ogs_pool_final(&ogs_pfcp_urr_pool);
     ogs_pool_final(&ogs_pfcp_qer_pool);
@@ -330,6 +347,67 @@ int ogs_pfcp_context_parse_config(const char *local, const char *remote)
                                     NULL : &self.pfcp_list6,
                                 NULL, self.pfcp_port, NULL);
                         ogs_assert(rv == OGS_OK);
+                    }
+                } else if (!strcmp(local_key, "cdr")) {
+                    ogs_yaml_iter_t cdr_iter;
+                    ogs_yaml_iter_recurse(&local_iter, &cdr_iter);
+
+                    /* Set defaults */
+                    self.usageLoggerState.enabled = false;
+                    self.usageLoggerState.file_capture_period_sec = 1800;
+                    self.usageLoggerState.reporting_period_sec = 10;
+                    strncpy(self.usageLoggerState.sgw_name, "undefined", SGW_NAME_STR_MAX_LEN - 1);
+                    strncpy(self.usageLoggerState.log_dir, "/var/log/open5gs", LOG_DIR_STR_MAX_LEN - 1);
+
+                    while (ogs_yaml_iter_next(&cdr_iter)) {
+                        const char *cdr_key = ogs_yaml_iter_key(&cdr_iter);
+                        ogs_assert(cdr_key);
+
+                        if (!strcmp(cdr_key, "enabled")) {
+                            bool enabled = false;
+                            const char *cdr_enabled = ogs_yaml_iter_value(&cdr_iter);
+
+                            if (!strcmp("True", cdr_enabled) || 
+                                !strcmp("true", cdr_enabled)) {
+                                ogs_info("CDR functionality has been enabled");
+                                enabled = true;
+                            }
+                            else {
+                                enabled = false;
+                            }
+                            self.usageLoggerState.enabled = enabled;
+                        } else if (!strcmp(cdr_key, "file_capture_period_sec")) {
+                            int file_capture_period_sec = 0;
+                            const char *file_capture_period_sec_str = ogs_yaml_iter_value(&cdr_iter);
+                            if (file_capture_period_sec_str)
+                                file_capture_period_sec = atoi(file_capture_period_sec_str);
+
+                            if (0 < file_capture_period_sec) {
+                                self.usageLoggerState.file_capture_period_sec = (unsigned)file_capture_period_sec;
+                            }
+                        } else if (!strcmp(cdr_key, "reporting_period_sec")) {
+                            int reporting_period_sec = 0;
+                            const char *reporting_period_sec_str = ogs_yaml_iter_value(&cdr_iter);
+                            if (reporting_period_sec_str)
+                                reporting_period_sec = atoi(reporting_period_sec_str);
+
+                            if (0 < reporting_period_sec) {
+                                self.usageLoggerState.reporting_period_sec = (unsigned)reporting_period_sec;
+                            }
+                        } else if (!strcmp(cdr_key, "sgw_name")) {
+                            const char *cdr_sgw_name = ogs_yaml_iter_value(&cdr_iter);
+
+                            if (cdr_sgw_name)
+                                strncpy(self.usageLoggerState.sgw_name, cdr_sgw_name, SGW_NAME_STR_MAX_LEN - 1);
+                        } else if (!strcmp(cdr_key, "log_dir")) {
+                            const char *cdr_log_dir = ogs_yaml_iter_value(&cdr_iter);
+
+                            if (cdr_log_dir)
+                                strncpy(self.usageLoggerState.log_dir, cdr_log_dir, LOG_DIR_STR_MAX_LEN - 1);
+
+                        } else {
+                            ogs_warn("unknown key `%s`", cdr_key);
+                        }
                     }
                 } else if (!strcmp(local_key, "subnet")) {
                     ogs_yaml_iter_t subnet_array, subnet_iter;
@@ -894,6 +972,16 @@ ogs_pfcp_pdr_t *ogs_pfcp_pdr_add(ogs_pfcp_sess_t *sess)
     }
     memset(pdr, 0, sizeof *pdr);
 
+    pdr->obj.type = OGS_PFCP_OBJ_PDR_TYPE;
+    pdr->src_if = OGS_PFCP_INTERFACE_UNKNOWN;
+
+    /* Set TEID */
+    ogs_pool_alloc(&ogs_pfcp_pdr_teid_pool, &pdr->teid_node);
+    ogs_assert(pdr->teid_node);
+
+    pdr->teid = *(pdr->teid_node);
+
+    /* Set PDR-ID */
     ogs_pool_alloc(&sess->pdr_id_pool, &pdr->id_node);
     if (pdr->id_node == NULL) {
         ogs_error("pdr_id_pool() failed");
@@ -901,16 +989,8 @@ ogs_pfcp_pdr_t *ogs_pfcp_pdr_add(ogs_pfcp_sess_t *sess)
         return NULL;
     }
 
-    pdr->obj.type = OGS_PFCP_OBJ_PDR_TYPE;
-
-    pdr->index = ogs_pool_index(&ogs_pfcp_pdr_pool, pdr);
-    ogs_assert(pdr->index > 0 &&
-            pdr->index <= ogs_app()->pool.sess * OGS_MAX_NUM_OF_PDR);
-
     pdr->id = *(pdr->id_node);
     ogs_assert(pdr->id > 0 && pdr->id <= OGS_MAX_NUM_OF_PDR);
-
-    pdr->src_if = OGS_PFCP_INTERFACE_UNKNOWN;
 
     pdr->sess = sess;
     ogs_list_add(&sess->pdr_list, pdr);
@@ -948,11 +1028,87 @@ ogs_pfcp_pdr_t *ogs_pfcp_pdr_find_or_add(
     return pdr;
 }
 
+void ogs_pfcp_pdr_swap_teid(ogs_pfcp_pdr_t *pdr)
+{
+    int i = 0;
+
+    ogs_assert(pdr);
+    ogs_assert(pdr->f_teid.teid > 0 &&
+            pdr->f_teid.teid <= ogs_pfcp_pdr_teid_pool.size);
+
+    /* Find out the Array Index for the restored TEID. */
+    i = pdr_random_to_index[pdr->f_teid.teid];
+    ogs_assert(i < ogs_pfcp_pdr_teid_pool.size);
+
+    ogs_assert(pdr->teid_node);
+    /*
+     * If SWAP has already done this, it will not try this again.
+     * This situation can occur when multiple PDRs are restored
+     * with the same TEID.
+     */
+    if (pdr->f_teid.teid == ogs_pfcp_pdr_teid_pool.array[i]) {
+        ogs_pfcp_pdr_teid_pool.array[i] = *(pdr->teid_node);
+        *(pdr->teid_node) = pdr->f_teid.teid;
+    }
+}
+
 void ogs_pfcp_object_teid_hash_set(
-        ogs_pfcp_object_type_e type, ogs_pfcp_pdr_t *pdr)
+        ogs_pfcp_object_type_e type, ogs_pfcp_pdr_t *pdr,
+        bool restoration_indication)
 {
     ogs_assert(type);
     ogs_assert(pdr);
+
+    if (ogs_pfcp_self()->up_function_features.ftup && pdr->f_teid.ch) {
+
+        ogs_pfcp_pdr_t *choosed_pdr = NULL;
+
+        if (pdr->f_teid.chid) {
+            choosed_pdr = ogs_pfcp_pdr_find_by_choose_id(
+                    pdr->sess, pdr->f_teid.choose_id);
+            if (!choosed_pdr) {
+                pdr->chid = true;
+                pdr->choose_id = pdr->f_teid.choose_id;
+            }
+        }
+
+        if (choosed_pdr) {
+            pdr->f_teid_len = choosed_pdr->f_teid_len;
+            memcpy(&pdr->f_teid, &choosed_pdr->f_teid, pdr->f_teid_len);
+
+        } else {
+            ogs_gtpu_resource_t *resource = NULL;
+            resource = ogs_pfcp_find_gtpu_resource(
+                    &ogs_gtp_self()->gtpu_resource_list,
+                    pdr->dnn, OGS_PFCP_INTERFACE_ACCESS);
+            if (resource) {
+                ogs_assert(
+                    (resource->info.v4 && pdr->f_teid.ipv4) ||
+                    (resource->info.v6 && pdr->f_teid.ipv6));
+                ogs_assert(OGS_OK ==
+                    ogs_pfcp_user_plane_ip_resource_info_to_f_teid(
+                    &resource->info, &pdr->f_teid, &pdr->f_teid_len));
+                if (resource->info.teidri)
+                    pdr->f_teid.teid = OGS_PFCP_GTPU_INDEX_TO_TEID(
+                            pdr->teid, resource->info.teidri,
+                            resource->info.teid_range);
+                else
+                    pdr->f_teid.teid = pdr->teid;
+            } else {
+                ogs_assert(
+                    (ogs_gtp_self()->gtpu_addr && pdr->f_teid.ipv4) ||
+                    (ogs_gtp_self()->gtpu_addr6 && pdr->f_teid.ipv6));
+                ogs_assert(OGS_OK ==
+                    ogs_pfcp_sockaddr_to_f_teid(
+                        pdr->f_teid.ipv4 ?
+                            ogs_gtp_self()->gtpu_addr : NULL,
+                        pdr->f_teid.ipv6 ?
+                            ogs_gtp_self()->gtpu_addr6 : NULL,
+                        &pdr->f_teid, &pdr->f_teid_len));
+                pdr->f_teid.teid = pdr->teid;
+            }
+        }
+    }
 
     if (pdr->hash.teid.len)
         ogs_hash_set(self.object_teid_hash,
@@ -1107,6 +1263,13 @@ void ogs_pfcp_pdr_remove(ogs_pfcp_pdr_t *pdr)
         ogs_free(pdr->ipv6_framed_routes);
     }
 
+    if (0 < pdr->num_of_urr) {
+        for (i = 0; i < pdr->num_of_urr; ++i) {
+            ogs_pfcp_urr_remove(pdr->urr[i]);
+        }
+    }
+
+    ogs_pool_free(&ogs_pfcp_pdr_teid_pool, pdr->teid_node);
     ogs_pool_free(&ogs_pfcp_pdr_pool, pdr);
 }
 
@@ -1220,7 +1383,7 @@ void ogs_pfcp_far_f_teid_hash_set(ogs_pfcp_far_t *far)
             &far->hash.f_teid.key, far->hash.f_teid.len, far);
 }
 
-ogs_pfcp_far_t *ogs_pfcp_far_find_by_error_indication(ogs_pkbuf_t *pkbuf)
+ogs_pfcp_far_t *ogs_pfcp_far_find_by_gtpu_error_indication(ogs_pkbuf_t *pkbuf)
 {
     ogs_pfcp_far_hash_f_teid_t hashkey;
     int hashkey_len;
@@ -1280,6 +1443,61 @@ ogs_pfcp_far_t *ogs_pfcp_far_find_by_error_indication(ogs_pkbuf_t *pkbuf)
 
     return (ogs_pfcp_far_t *)ogs_hash_get(
             self.far_f_teid_hash, &hashkey, hashkey_len);
+}
+
+ogs_pfcp_far_t *ogs_pfcp_far_find_by_pfcp_session_report(
+        ogs_pfcp_sess_t *sess,
+        ogs_pfcp_tlv_error_indication_report_t *error_indication_report)
+{
+    ogs_pfcp_far_t *far = NULL;
+    ogs_pfcp_f_teid_t *remote_f_teid = NULL;
+
+    uint32_t teid;
+    uint16_t len;  /* OGS_IPV4_LEN or OGS_IPV6_LEN */
+    uint32_t addr[4];
+
+    ogs_assert(sess);
+    ogs_assert(error_indication_report);
+
+    if (error_indication_report->presence == 0) {
+        ogs_error("No Error Indication Report");
+        return NULL;
+    }
+
+    if (error_indication_report->remote_f_teid.presence == 0) {
+        ogs_error("No Remote F-TEID");
+        return NULL;
+    }
+
+    remote_f_teid = error_indication_report->remote_f_teid.data;
+    ogs_assert(remote_f_teid);
+
+    teid = be32toh(remote_f_teid->teid);
+    if (remote_f_teid->ipv4 && remote_f_teid->ipv6) {
+        ogs_error("User plane should not set both IPv4 and IPv6");
+        return NULL;
+    } else if (remote_f_teid->ipv4) {
+        len = OGS_IPV4_LEN;
+        memcpy(addr, &remote_f_teid->addr, len);
+    } else if (remote_f_teid->ipv6) {
+        len = OGS_IPV6_LEN;
+        memcpy(addr, remote_f_teid->addr6, len);
+    } else {
+        ogs_error("No IPv4 and IPv6");
+        return NULL;
+    }
+
+    ogs_list_for_each(&sess->far_list, far) {
+        if (teid == far->outer_header_creation.teid)
+            return far;
+    }
+
+    ogs_error("Cannot find the session context "
+            "[TEID:0x%x,LEN:%d,ADDR:%08x %08x %08x %08x]",
+            teid, len, be32toh(addr[0]), be32toh(addr[1]),
+            be32toh(addr[2]), be32toh(addr[3]));
+
+    return NULL;
 }
 
 void ogs_pfcp_far_teid_hash_set(ogs_pfcp_far_t *far)
@@ -1929,41 +2147,29 @@ ogs_pfcp_subnet_t *ogs_pfcp_find_subnet_by_dnn(int family, const char *dnn)
 
 void ogs_pfcp_pool_init(ogs_pfcp_sess_t *sess)
 {
-    int i;
-
     ogs_assert(sess);
 
     sess->obj.type = OGS_PFCP_OBJ_SESS_TYPE;
 
-    ogs_index_init(&sess->pdr_id_pool, OGS_MAX_NUM_OF_PDR);
-    ogs_index_init(&sess->far_id_pool, OGS_MAX_NUM_OF_FAR);
-    ogs_index_init(&sess->urr_id_pool, OGS_MAX_NUM_OF_URR);
-    ogs_index_init(&sess->qer_id_pool, OGS_MAX_NUM_OF_QER);
-    ogs_index_init(&sess->bar_id_pool, OGS_MAX_NUM_OF_BAR);
+    ogs_pool_init(&sess->pdr_id_pool, OGS_MAX_NUM_OF_PDR);
+    ogs_pool_init(&sess->far_id_pool, OGS_MAX_NUM_OF_FAR);
+    ogs_pool_init(&sess->urr_id_pool, OGS_MAX_NUM_OF_URR);
+    ogs_pool_init(&sess->qer_id_pool, OGS_MAX_NUM_OF_QER);
+    ogs_pool_init(&sess->bar_id_pool, OGS_MAX_NUM_OF_BAR);
 
-    for (i = 1; i <= OGS_MAX_NUM_OF_PDR; i++) {
-        sess->pdr_id_pool.array[i-1] = i;
-    }
-    for (i = 1; i <= OGS_MAX_NUM_OF_FAR; i++) {
-        sess->far_id_pool.array[i-1] = i;
-    }
-    for (i = 1; i <= OGS_MAX_NUM_OF_URR; i++) {
-        sess->urr_id_pool.array[i-1] = i;
-    }
-    for (i = 1; i <= OGS_MAX_NUM_OF_QER; i++) {
-        sess->qer_id_pool.array[i-1] = i;
-    }
-    for (i = 1; i <= OGS_MAX_NUM_OF_BAR; i++) {
-        sess->bar_id_pool.array[i-1] = i;
-    }
+    ogs_pool_sequence_id_generate(&sess->pdr_id_pool);
+    ogs_pool_sequence_id_generate(&sess->far_id_pool);
+    ogs_pool_sequence_id_generate(&sess->urr_id_pool);
+    ogs_pool_sequence_id_generate(&sess->qer_id_pool);
+    ogs_pool_sequence_id_generate(&sess->bar_id_pool);
 }
 void ogs_pfcp_pool_final(ogs_pfcp_sess_t *sess)
 {
     ogs_assert(sess);
 
-    ogs_index_final(&sess->pdr_id_pool);
-    ogs_index_final(&sess->far_id_pool);
-    ogs_index_final(&sess->urr_id_pool);
-    ogs_index_final(&sess->qer_id_pool);
-    ogs_index_final(&sess->bar_id_pool);
+    ogs_pool_final(&sess->pdr_id_pool);
+    ogs_pool_final(&sess->far_id_pool);
+    ogs_pool_final(&sess->urr_id_pool);
+    ogs_pool_final(&sess->qer_id_pool);
+    ogs_pool_final(&sess->bar_id_pool);
 }
