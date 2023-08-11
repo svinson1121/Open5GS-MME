@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 by Sukchan Lee <acetcom@gmail.com>
+ * Copyright (C) 2019-2023 by Sukchan Lee <acetcom@gmail.com>
  *
  * This file is part of Open5GS.
  *
@@ -104,9 +104,17 @@ int esm_handle_pdn_connectivity_request(mme_bearer_t *bearer,
     }
 
     if (req->presencemask &
+        OGS_NAS_EPS_PDN_CONNECTIVITY_REQUEST_EXTENDED_PROTOCOL_CONFIGURATION_OPTIONS_PRESENT) {
+        ogs_nas_extended_protocol_configuration_options_t
+            *extended_protocol_configuration_options =
+            &req->extended_protocol_configuration_options;
+
+        OGS_NAS_STORE_DATA(&sess->ue_epco,
+            extended_protocol_configuration_options);
+    } else if (req->presencemask &
         OGS_NAS_EPS_PDN_CONNECTIVITY_REQUEST_PROTOCOL_CONFIGURATION_OPTIONS_PRESENT) {
         ogs_nas_protocol_configuration_options_t
-            *protocol_configuration_options = 
+            *protocol_configuration_options =
             &req->protocol_configuration_options;
 
         OGS_NAS_STORE_DATA(&sess->ue_pco, protocol_configuration_options);
@@ -153,6 +161,10 @@ int esm_handle_pdn_connectivity_request(mme_bearer_t *bearer,
 
         ogs_assert(OGS_OK ==
             mme_gtp_send_create_session_request(sess, create_action));
+
+        if (!strcmp("sos", sess->session->name)) {
+            mme_metrics_inst_global_inc(MME_METR_GLOB_GAUGE_EMERGENCY_BEARERS);
+        }
     } else {
         ogs_error("No APN");
         r = nas_eps_send_pdn_connectivity_reject(
@@ -184,9 +196,17 @@ int esm_handle_information_response(mme_sess_t *sess,
     }
 
     if (rsp->presencemask &
+        OGS_NAS_EPS_ESM_INFORMATION_RESPONSE_EXTENDED_PROTOCOL_CONFIGURATION_OPTIONS_PRESENT) {
+        ogs_nas_extended_protocol_configuration_options_t
+            *extended_protocol_configuration_options =
+            &rsp->extended_protocol_configuration_options;
+
+        OGS_NAS_STORE_DATA(&sess->ue_epco,
+            extended_protocol_configuration_options);
+    } else if (rsp->presencemask &
         OGS_NAS_EPS_ESM_INFORMATION_RESPONSE_PROTOCOL_CONFIGURATION_OPTIONS_PRESENT) {
         ogs_nas_protocol_configuration_options_t
-            *protocol_configuration_options = 
+            *protocol_configuration_options =
                 &rsp->protocol_configuration_options;
         OGS_NAS_STORE_DATA(&sess->ue_pco, protocol_configuration_options);
     }

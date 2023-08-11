@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 by Sukchan Lee <acetcom@gmail.com>
+ * Copyright (C) 2019-2023 by Sukchan Lee <acetcom@gmail.com>
  *
  * This file is part of Open5GS.
  *
@@ -17,9 +17,31 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "context.h"
 #include "pfcp-path.h"
 #include "gtp-path.h"
 #include "sxa-handler.h"
+
+static void sgwu_sxa_handle_create_urr(sgwu_sess_t *sess, ogs_pfcp_tlv_create_urr_t *create_urr_arr,
+                              uint8_t *cause_value, uint8_t *offending_ie_value)
+{
+    int i;
+    ogs_pfcp_urr_t *urr;
+
+    *cause_value = OGS_PFCP_CAUSE_REQUEST_ACCEPTED;
+
+    for (i = 0; i < OGS_MAX_NUM_OF_URR; i++) {
+        urr = ogs_pfcp_handle_create_urr(&sess->pfcp, &create_urr_arr[i],
+                    cause_value, offending_ie_value);
+        if (!urr)
+            return;
+        
+        /* TODO: enable counters somewhere else if ISTM not set, upon first pkt received */
+        if (urr->meas_info.istm) {
+            sgwu_sess_urr_acc_timers_setup(sess, urr);
+        }
+    }
+}
 
 void sgwu_sxa_handle_session_establishment_request(
         sgwu_sess_t *sess, ogs_pfcp_xact_t *xact, 
@@ -32,6 +54,9 @@ void sgwu_sxa_handle_session_establishment_request(
     uint8_t cause_value = 0;
     uint8_t offending_ie_value = 0;
     int i;
+
+    ogs_pfcp_sereq_flags_t sereq_flags;
+    bool restoration_indication = false;
 
     ogs_assert(xact);
     ogs_assert(req);
@@ -48,9 +73,16 @@ void sgwu_sxa_handle_session_establishment_request(
         return;
     }
 
+    /* PFCPSEReq-Flags */
+    memset(&sereq_flags, 0, sizeof(sereq_flags));
+    if (req->pfcpsereq_flags.presence == 1) {
+        sereq_flags.value = req->pfcpsereq_flags.u8;
+    }
+
     for (i = 0; i < OGS_MAX_NUM_OF_PDR; i++) {
         created_pdr[i] = ogs_pfcp_handle_create_pdr(&sess->pfcp,
-                &req->create_pdr[i], &cause_value, &offending_ie_value);
+                &req->create_pdr[i], &sereq_flags,
+                &cause_value, &offending_ie_value);
         if (created_pdr[i] == NULL)
             break;
     }
@@ -63,6 +95,10 @@ void sgwu_sxa_handle_session_establishment_request(
                     &cause_value, &offending_ie_value) == NULL)
             break;
     }
+    if (cause_value != OGS_PFCP_CAUSE_REQUEST_ACCEPTED)
+        goto cleanup;
+
+    sgwu_sxa_handle_create_urr(sess, &req->create_urr[0], &cause_value, &offending_ie_value);
     if (cause_value != OGS_PFCP_CAUSE_REQUEST_ACCEPTED)
         goto cleanup;
 
@@ -79,6 +115,18 @@ void sgwu_sxa_handle_session_establishment_request(
     if (cause_value != OGS_PFCP_CAUSE_REQUEST_ACCEPTED)
         goto cleanup;
 
+    /* PFCPSEReq-Flags */
+    if (sereq_flags.restoration_indication == 1) {
+        for (i = 0; i < num_of_created_pdr; i++) {
+            pdr = created_pdr[i];
+            ogs_assert(pdr);
+
+            if (pdr->f_teid_len)
+                ogs_pfcp_pdr_swap_teid(pdr);
+        }
+        restoration_indication = true;
+    }
+
     /* Setup GTP Node */
     ogs_list_for_each(&sess->pfcp.far_list, far) {
         ogs_assert(OGS_ERROR != ogs_pfcp_setup_far_gtpu_node(far));
@@ -86,70 +134,14 @@ void sgwu_sxa_handle_session_establishment_request(
             ogs_pfcp_far_f_teid_hash_set(far);
     }
 
-    /* Setup TEID Hash */
     for (i = 0; i < num_of_created_pdr; i++) {
         pdr = created_pdr[i];
         ogs_assert(pdr);
 
-        if (pdr->f_teid_len) {
-            ogs_pfcp_object_type_e type = OGS_PFCP_OBJ_PDR_TYPE;
-
-            if (ogs_pfcp_self()->up_function_features.ftup &&
-                pdr->f_teid.ch) {
-
-                ogs_pfcp_pdr_t *choosed_pdr = NULL;
-
-                if (pdr->f_teid.chid) {
-                    type = OGS_PFCP_OBJ_SESS_TYPE;
-
-                    choosed_pdr = ogs_pfcp_pdr_find_by_choose_id(
-                            &sess->pfcp, pdr->f_teid.choose_id);
-                    if (!choosed_pdr) {
-                        pdr->chid = true;
-                        pdr->choose_id = pdr->f_teid.choose_id;
-                    }
-                }
-
-                if (choosed_pdr) {
-                    pdr->f_teid_len = choosed_pdr->f_teid_len;
-                    memcpy(&pdr->f_teid, &choosed_pdr->f_teid, pdr->f_teid_len);
-
-                } else {
-                    ogs_gtpu_resource_t *resource = NULL;
-                    resource = ogs_pfcp_find_gtpu_resource(
-                            &ogs_gtp_self()->gtpu_resource_list,
-                            pdr->apn, OGS_PFCP_INTERFACE_ACCESS);
-                    if (resource) {
-                        ogs_assert(
-                            (resource->info.v4 && pdr->f_teid.ipv4) ||
-                            (resource->info.v6 && pdr->f_teid.ipv6));
-                        ogs_assert(OGS_OK ==
-                            ogs_pfcp_user_plane_ip_resource_info_to_f_teid(
-                            &resource->info, &pdr->f_teid, &pdr->f_teid_len));
-                        if (resource->info.teidri)
-                            pdr->f_teid.teid = OGS_PFCP_GTPU_INDEX_TO_TEID(
-                                    pdr->index, resource->info.teidri,
-                                    resource->info.teid_range);
-                        else
-                            pdr->f_teid.teid = pdr->index;
-                    } else {
-                        ogs_assert(
-                            (ogs_gtp_self()->gtpu_addr && pdr->f_teid.ipv4) ||
-                            (ogs_gtp_self()->gtpu_addr6 && pdr->f_teid.ipv6));
-                        ogs_assert(OGS_OK ==
-                            ogs_pfcp_sockaddr_to_f_teid(
-                                pdr->f_teid.ipv4 ?
-                                    ogs_gtp_self()->gtpu_addr : NULL,
-                                pdr->f_teid.ipv6 ?
-                                    ogs_gtp_self()->gtpu_addr6 : NULL,
-                                &pdr->f_teid, &pdr->f_teid_len));
-                        pdr->f_teid.teid = pdr->index;
-                    }
-                }
-            }
-
-            ogs_pfcp_object_teid_hash_set(type, pdr);
-        }
+        /* Setup TEID Hash */
+        if (pdr->f_teid_len)
+            ogs_pfcp_object_teid_hash_set(
+                    OGS_PFCP_OBJ_PDR_TYPE, pdr, restoration_indication);
     }
 
     /* Send Buffered Packet to gNB */
@@ -159,9 +151,15 @@ void sgwu_sxa_handle_session_establishment_request(
         }
     }
 
-    ogs_assert(OGS_OK ==
-        sgwu_pfcp_send_session_establishment_response(
-            xact, sess, created_pdr, num_of_created_pdr));
+    if (restoration_indication == true ||
+        ogs_pfcp_self()->up_function_features.ftup == 0)
+        ogs_assert(OGS_OK ==
+            sgwu_pfcp_send_session_establishment_response(
+                xact, sess, NULL, 0));
+    else
+        ogs_assert(OGS_OK ==
+            sgwu_pfcp_send_session_establishment_response(
+                xact, sess, created_pdr, num_of_created_pdr));
     return;
 
 cleanup:
@@ -200,7 +198,7 @@ void sgwu_sxa_handle_session_modification_request(
 
     for (i = 0; i < OGS_MAX_NUM_OF_PDR; i++) {
         created_pdr[i] = ogs_pfcp_handle_create_pdr(&sess->pfcp,
-                &req->create_pdr[i], &cause_value, &offending_ie_value);
+                &req->create_pdr[i], NULL, &cause_value, &offending_ie_value);
         if (created_pdr[i] == NULL)
             break;
     }
@@ -301,70 +299,13 @@ void sgwu_sxa_handle_session_modification_request(
             ogs_pfcp_far_f_teid_hash_set(far);
     }
 
-    /* Setup TEID Hash */
     for (i = 0; i < num_of_created_pdr; i++) {
         pdr = created_pdr[i];
         ogs_assert(pdr);
 
-        if (pdr->f_teid_len) {
-            ogs_pfcp_object_type_e type = OGS_PFCP_OBJ_PDR_TYPE;
-
-            if (ogs_pfcp_self()->up_function_features.ftup &&
-                pdr->f_teid.ch) {
-
-                ogs_pfcp_pdr_t *choosed_pdr = NULL;
-
-                if (pdr->f_teid.chid) {
-                    type = OGS_PFCP_OBJ_SESS_TYPE;
-
-                    choosed_pdr = ogs_pfcp_pdr_find_by_choose_id(
-                            &sess->pfcp, pdr->f_teid.choose_id);
-                    if (!choosed_pdr) {
-                        pdr->chid = true;
-                        pdr->choose_id = pdr->f_teid.choose_id;
-                    }
-                }
-
-                if (choosed_pdr) {
-                    pdr->f_teid_len = choosed_pdr->f_teid_len;
-                    memcpy(&pdr->f_teid, &choosed_pdr->f_teid, pdr->f_teid_len);
-
-                } else {
-                    ogs_gtpu_resource_t *resource = NULL;
-                    resource = ogs_pfcp_find_gtpu_resource(
-                            &ogs_gtp_self()->gtpu_resource_list,
-                            pdr->apn, OGS_PFCP_INTERFACE_ACCESS);
-                    if (resource) {
-                        ogs_assert(
-                            (resource->info.v4 && pdr->f_teid.ipv4) ||
-                            (resource->info.v6 && pdr->f_teid.ipv6));
-                        ogs_assert(OGS_OK ==
-                            ogs_pfcp_user_plane_ip_resource_info_to_f_teid(
-                            &resource->info, &pdr->f_teid, &pdr->f_teid_len));
-                        if (resource->info.teidri)
-                            pdr->f_teid.teid = OGS_PFCP_GTPU_INDEX_TO_TEID(
-                                    pdr->index, resource->info.teidri,
-                                    resource->info.teid_range);
-                        else
-                            pdr->f_teid.teid = pdr->index;
-                    } else {
-                        ogs_assert(
-                            (ogs_gtp_self()->gtpu_addr && pdr->f_teid.ipv4) ||
-                            (ogs_gtp_self()->gtpu_addr6 && pdr->f_teid.ipv6));
-                        ogs_assert(OGS_OK ==
-                            ogs_pfcp_sockaddr_to_f_teid(
-                                pdr->f_teid.ipv4 ?
-                                    ogs_gtp_self()->gtpu_addr : NULL,
-                                pdr->f_teid.ipv6 ?
-                                    ogs_gtp_self()->gtpu_addr6 : NULL,
-                                &pdr->f_teid, &pdr->f_teid_len));
-                        pdr->f_teid.teid = pdr->index;
-                    }
-                }
-            }
-
-            ogs_pfcp_object_teid_hash_set(type, pdr);
-        }
+        /* Setup TEID Hash */
+        if (pdr->f_teid_len)
+            ogs_pfcp_object_teid_hash_set(OGS_PFCP_OBJ_PDR_TYPE, pdr, false);
     }
 
     /* Send Buffered Packet to gNB */
@@ -374,9 +315,14 @@ void sgwu_sxa_handle_session_modification_request(
         }
     }
 
-    ogs_assert(OGS_OK ==
-        sgwu_pfcp_send_session_modification_response(
-            xact, sess, created_pdr, num_of_created_pdr));
+    if (ogs_pfcp_self()->up_function_features.ftup == 0)
+        ogs_assert(OGS_OK ==
+            sgwu_pfcp_send_session_modification_response(
+                xact, sess, NULL, 0));
+    else
+        ogs_assert(OGS_OK ==
+            sgwu_pfcp_send_session_modification_response(
+                xact, sess, created_pdr, num_of_created_pdr));
     return;
 
 cleanup:
