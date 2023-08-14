@@ -25,6 +25,7 @@
 #include "s1ap-path.h"
 #include "mme-s11-build.h"
 #include "mme-sm.h"
+#include "dns_resolvers.h"
 
 static void _gtpv2_c_recv_cb(short when, ogs_socket_t fd, void *data)
 {
@@ -228,6 +229,27 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
     if (!pkbuf) {
         ogs_error("mme_s11_build_create_session_request() failed");
         return OGS_ERROR;
+    }
+
+    if (mme_self()->dns_target_sgw) {
+        char ipv4[INET_ADDRSTRLEN] = "";
+        ResolverContext context = {};
+        /* We do not include the APN for SGW lookups */
+        snprintf(context.mnc, DNS_RESOLVERS_MAX_MNC_STR, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
+        snprintf(context.mcc, DNS_RESOLVERS_MAX_MCC_STR, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
+        strncpy(context.target, "sgw", DNS_RESOLVERS_MAX_TARGET_STR);
+        strncpy(context.interface, "s11", DNS_RESOLVERS_MAX_INTERFACE_STR);
+        strncpy(context.protocol, "gtp", DNS_RESOLVERS_MAX_PROTOCOL_STR);
+        strncpy(context.domain_suffix, mme_self()->dns_base_domain, DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR);
+
+        if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
+            /* Clobber the SGW addr if we resolved */
+            ogs_info("Successfully clobbered the SGW IP in CSR with '%s'", ipv4);
+            ogs_ipv4_from_string((uint32_t*)&sgw_ue->gnode->addr.sa.sa_data[2], ipv4);
+        }
+        else {
+            ogs_warn("Failed to resolve dns and update SGW IP in CSR");
+        }
     }
 
     xact = ogs_gtp_xact_local_create(sgw_ue->gnode, &h, pkbuf, timeout, sess);

@@ -27,6 +27,7 @@
 #include "s1ap-handler.h"
 #include "mme-sm.h"
 #include "mme-gtp-path.h"
+#include "dns_resolvers.h"
 
 #define MAX_CELL_PER_ENB            8
 
@@ -36,6 +37,7 @@ static ogs_diam_config_t g_diam_conf;
 int __mme_log_domain;
 int __emm_log_domain;
 int __esm_log_domain;
+int __ogs_dns_resolvers_domain;
 
 static OGS_POOL(mme_sgw_pool, mme_sgw_t);
 static OGS_POOL(mme_pgw_pool, mme_pgw_t);
@@ -84,6 +86,7 @@ void mme_context_init(void)
     ogs_log_install_domain(&__mme_log_domain, "mme", ogs_core()->log.level);
     ogs_log_install_domain(&__emm_log_domain, "emm", ogs_core()->log.level);
     ogs_log_install_domain(&__esm_log_domain, "esm", ogs_core()->log.level);
+    ogs_log_install_domain(&__ogs_dns_resolvers_domain, "dns_resolvers", ogs_core()->log.level);
 
     ogs_list_init(&self.s1ap_list);
     ogs_list_init(&self.s1ap_list6);
@@ -1627,6 +1630,36 @@ int mme_context_parse_config(void)
                             }
                         } else
                             ogs_warn("unknown key `%s`", mme_key);
+                    }
+                } else if (!strcmp(mme_key, "dns")) {
+                    ogs_yaml_iter_t dns_iter;
+                    ogs_yaml_iter_recurse(&mme_iter, &dns_iter);
+
+                    /* Going through keys and values in dns section */
+                    while (ogs_yaml_iter_next(&dns_iter)) {
+                        const char *dns_key = ogs_yaml_iter_key(&dns_iter);
+                        const char *dns_value = ogs_yaml_iter_value(&dns_iter);
+                        ogs_assert(dns_key);
+                        ogs_assert(dns_value);
+
+                        if (strcmp(dns_key, "dns_target_sgw") == 0) {
+                            if (!strcmp("True", dns_value) || 
+                                !strcmp("true", dns_value)) {
+                                ogs_info("SGW DNS lookups enabled");
+                                self.dns_target_sgw = true;
+                            }
+                        } else if (strcmp(dns_key, "dns_target_pgw") == 0) {
+                            if (!strcmp("True", dns_value) || 
+                                !strcmp("true", dns_value)) {
+                                ogs_info("PGW DNS lookups enabled");
+                                self.dns_target_pgw = true;
+                            }
+                        } else if (strcmp(dns_key, "base_domain") == 0) {
+                            strncpy(self.dns_base_domain, dns_value, MAX_DNS_BASE_DOMAIN_NAME);
+                            ogs_info("DNS lookups using base domain '%s'", self.dns_base_domain);
+                        } else {
+                            ogs_warn("unknown key `%s`", dns_key);
+                        }
                     }
                 } else
                     ogs_warn("unknown key `%s`", mme_key);

@@ -90,6 +90,7 @@ libmme = static_library('mme',
                     libdiameter_s6a_dep,
                     libdiameter_s13_dep,
                     libgtp_dep,
+                    libdnsresolvers_dep,
                     libredis_dep],
     install : false)
 
@@ -102,6 +103,7 @@ libmme_dep = declare_dependency(
                     libdiameter_s6a_dep,
                     libdiameter_s13_dep,
                     libgtp_dep,
+                    libdnsresolvers_dep,
                     libredis_dep])
 
 mme_sources = files('''
