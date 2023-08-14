@@ -31,7 +31,6 @@ libresolv_dep = cc.find_library('libresolv')
 
 libdnsresolvers = static_library('dns_resolvers',
     sources : libdnsresolvers_sources,
-    version : libogslib_version,
     c_args : '-DOGS_S1AP_COMPILATION',
     include_directories : libdnsresolvers_inc,
     dependencies : [libcore_dep, libresolv_dep],
