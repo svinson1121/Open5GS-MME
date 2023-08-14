@@ -828,6 +828,7 @@ void smf_epc_n4_handle_session_modification_response(
         ogs_pfcp_session_modification_response_t *rsp)
 {
     int i;
+    int rv;
 
     smf_bearer_t *bearer = NULL;
     ogs_gtp_xact_t *gtp_xact = NULL;
@@ -1056,7 +1057,8 @@ void smf_epc_n4_handle_session_modification_response(
             if (gtp_xact->gtp_version == 1) {
 
                 bearer = gtp_xact->data;
-                smf_gtp1_send_update_pdp_context_response(bearer, gtp_xact);
+                rv = smf_gtp1_send_update_pdp_context_response(bearer, gtp_xact);
+                ogs_expect(rv == OGS_OK);
 
             } else {
 
