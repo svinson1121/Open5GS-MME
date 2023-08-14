@@ -2884,7 +2884,11 @@ int smf_pco_build(uint8_t *pco_buf, uint8_t *buffer, int length)
     memset(&pco_ipcp, 0, sizeof(pco_ipcp));
 
     size = ogs_pco_parse(&ue, buffer, length);
-    ogs_assert(size);
+    ogs_expect(size);
+    if (0 == size) {
+        ogs_error("ogs_pco_parse failed");
+        return 0;
+    }
 
     memset(&smf, 0, sizeof(ogs_pco_t));
     smf.ext = ue.ext;

@@ -678,10 +678,12 @@ void smf_gsm_state_wait_pfcp_establishment(ogs_fsm_t *s, smf_event_t *e)
                     case 1:
                         rv = smf_gtp1_send_create_pdp_context_response(
                                 sess, gtp_xact);
+                        ogs_expect(rv == OGS_OK);
                         break;
                     case 2:
                         rv = smf_gtp2_send_create_session_response(
                                 sess, gtp_xact);
+                        ogs_expect(rv == OGS_OK);
                         break;
                     default:
                         rv = OGS_ERROR;
@@ -720,7 +722,12 @@ void smf_gsm_state_wait_pfcp_establishment(ogs_fsm_t *s, smf_event_t *e)
                 param.state = SMF_UE_REQUESTED_PDU_SESSION_ESTABLISHMENT;
                 param.n1smbuf =
                     gsm_build_pdu_session_establishment_accept(sess);
-                ogs_assert(param.n1smbuf);
+                ogs_expect(param.n1smbuf);
+                if (NULL == param.n1smbuf) {
+                    ogs_error("gsm_build_pdu_session_establishment_accept returned NULL for pfcp message of type %d",
+                        pfcp_message->h.type);
+                    return;
+                }
                 param.n2smbuf =
                     ngap_build_pdu_session_resource_setup_request_transfer(
                             sess);
@@ -1378,6 +1385,7 @@ void smf_gsm_state_wait_epc_auth_release(ogs_fsm_t *s, smf_event_t *e)
     ogs_diam_gy_message_t *gy_message = NULL;
     ogs_diam_s6b_message_t *s6b_message = NULL;
     uint32_t diam_err;
+    int rv;
 
     ogs_assert(s);
     ogs_assert(e);
@@ -1474,12 +1482,14 @@ test_can_proceed:
                  */
                 switch (e->gtp_xact->gtp_version) {
                 case 1:
-                    smf_gtp1_send_delete_pdp_context_response(
+                    rv = smf_gtp1_send_delete_pdp_context_response(
                                 sess, e->gtp_xact);
+                    ogs_expect(rv == OGS_OK);
                     break;
                 case 2:
-                    smf_gtp2_send_delete_session_response(
+                    rv = smf_gtp2_send_delete_session_response(
                                 sess, e->gtp_xact);
+                    ogs_expect(rv == OGS_OK);
                     break;
                 }
             } else {
