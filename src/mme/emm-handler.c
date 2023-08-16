@@ -913,6 +913,7 @@ static int send_to_downlink_default(mme_ue_t *mme_ue) {
     emm_information->presencemask |=
         OGS_NAS_EPS_EMM_INFORMATION_NETWORK_DAYLIGHT_SAVING_TIME_PRESENT;
     network_daylight_saving_time->length = 1;
+    network_daylight_saving_time->value = mme_self()->daylight_saving_time_adjustment;
 
     emmbuf = nas_eps_security_encode(mme_ue, &message);
     if (NULL == emmbuf) {
