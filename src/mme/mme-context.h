@@ -200,6 +200,8 @@ typedef struct mme_context_s {
     bool dns_target_pgw;
     char dns_base_domain[MAX_DNS_BASE_DOMAIN_NAME];
 
+    uint8_t daylight_saving_time_adjustment;
+
 } mme_context_t;
 
 typedef struct mme_sgw_s {
