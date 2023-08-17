@@ -2683,7 +2683,9 @@ static bool compare_ue_info(mme_sgw_t *node, enb_ue_t *enb_ue)
 
 static mme_sgw_t *selected_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue)
 {
-    mme_sgw_t *next, *node;
+    mme_sgw_t *next, *node, *random;
+    int sgw_count;
+    int index;
 
     ogs_assert(current);
     ogs_assert(enb_ue);
@@ -2698,7 +2700,14 @@ static mme_sgw_t *selected_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue)
         if (compare_ue_info(node, enb_ue) == true) return node;
     }
 
-    return next ? next : ogs_list_first(&mme_self()->sgw_list);
+    /* Select a random sgw */
+    sgw_count = ogs_list_count(&mme_self()->sgw_list);
+    index = asn_random_between(0, sgw_count - 1);
+    ogs_debug("There are %i SGWs in our list, we have randomly picked the one at index %i", sgw_count, index);
+    random = ogs_list_at(&mme_self()->sgw_list, index);
+    ogs_assert(random);
+
+    return random;
 }
 
 static mme_sgw_t *changed_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue)
