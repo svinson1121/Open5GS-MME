@@ -68,6 +68,8 @@ static bool compare_ue_info(mme_sgw_t *node, enb_ue_t *enb_ue);
 static mme_sgw_t *selected_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue);
 static mme_sgw_t *changed_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue);
 
+static int rand_under(int val);
+
 void mme_context_init(void)
 {
     ogs_assert(context_initialized == 0);
@@ -2099,6 +2101,53 @@ void mme_pgw_remove_all(void)
         mme_pgw_remove(pgw);
 }
 
+ogs_sockaddr_t *mme_pgw_addr_select_random(ogs_list_t *list, int family)
+{
+    enum {ADDR_BUF_SZ = 32};
+    ogs_sockaddr_t *addr_buf[ADDR_BUF_SZ] = {0};
+    ogs_sockaddr_t *addr = NULL;
+    mme_pgw_t *pgw = NULL;
+    char buf[OGS_ADDRSTRLEN];
+    int index = 0;
+    int addr_count = 0;
+    
+    ogs_assert(list);
+
+    /* Get all addresses for this family */
+    ogs_list_for_each(list, pgw) {
+        ogs_assert(pgw->sa_list);
+        ogs_sockaddr_t *addr = pgw->sa_list;
+
+        while (addr && (addr_count < ADDR_BUF_SZ)) {
+            if (addr->ogs_sa_family == family) {
+                addr_buf[addr_count] = addr;
+                ++addr_count;
+            }
+            addr = addr->next;
+        }
+    }
+
+    ogs_debug("There are %i/%i PGW addresses we can pick from given the family type of %i", addr_count, ADDR_BUF_SZ, family);
+    
+    if (0 == addr_count) {
+        ogs_info("No viable PGW addresses for family %i, returning NULL", family);
+        return NULL;
+    }
+
+    index = rand_under(addr_count);
+    ogs_debug("We have randomly picked the PGW address at index %i", index);
+    ogs_assert(index < addr_count);
+    addr = addr_buf[index];
+
+    ogs_info(
+        "PWG address for family %i was '%s'",
+        family,
+        OGS_ADDR(addr, buf)
+    );
+
+    return addr;
+}
+
 ogs_sockaddr_t *mme_pgw_addr_find_by_apn(
         ogs_list_t *list, int family, char *apn)
 {
@@ -2702,10 +2751,9 @@ static mme_sgw_t *selected_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue)
 
     /* Select a random sgw */
     sgw_count = ogs_list_count(&mme_self()->sgw_list);
-    index = asn_random_between(0, sgw_count - 1);
+    index = rand_under(sgw_count);
     ogs_debug("There are %i SGWs in our list, we have randomly picked the one at index %i", sgw_count, index);
     random = ogs_list_at(&mme_self()->sgw_list, index);
-    ogs_assert(random);
 
     return random;
 }
@@ -4206,4 +4254,13 @@ static void stats_remove_mme_session(void)
     mme_metrics_inst_global_dec(MME_METR_GLOB_GAUGE_MME_SESS);
     num_of_mme_sess = num_of_mme_sess - 1;
     ogs_info("[Removed] Number of MME-Sessions is now %d", num_of_mme_sess);
+}
+
+static int rand_under(int val)
+{
+    if (val < 2) {
+        return 0;
+    }
+    srand(time(NULL));
+    return rand() % val;
 }
