@@ -136,7 +136,7 @@ void smf_state_operational(ogs_fsm_t *s, smf_event_t *e)
         case OGS_GTP2_CREATE_SESSION_REQUEST_TYPE:
             smf_metrics_inst_global_inc(SMF_METR_GLOB_CTR_S5C_RX_CREATESESSIONREQ);
             smf_metrics_inst_gtp_node_inc(smf_gnode->metrics, SMF_METR_GTP_NODE_CTR_S5C_RX_CREATESESSIONREQ);
-            if (gtp2_message.h.teid == 0) {
+            if ((0 == gtp2_message.h.teid) || (NULL != sess)) {
                 ogs_expect(!sess);
                 sess = smf_sess_add_by_gtp2_message(&gtp2_message);
                 if (sess)
