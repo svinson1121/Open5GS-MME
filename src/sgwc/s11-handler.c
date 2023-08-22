@@ -261,7 +261,13 @@ void sgwc_s11_handle_create_session_request(
     if (sess) {
         ogs_info("OLD Session Release [IMSI:%s,APN:%s]",
                 sgwc_ue->imsi_bcd, sess->session.name);
-        sgwc_sess_remove(sess);
+        
+        /* "All functionality performed by the SGW-U is controlled from the SGW-C"
+         * We need to also remove the session resources in the SGW-U */
+        ogs_list_for_each(&sgwc_ue->sess_list, sess) {
+            ogs_expect(OGS_OK ==
+                sgwc_pfcp_send_session_deletion_request(sess, NULL, NULL));
+        }
     }
     sess = sgwc_sess_add(sgwc_ue, apn);
     ogs_assert(sess);
