@@ -1443,7 +1443,8 @@ smf_sess_t *smf_sess_add_by_gtp2_message(ogs_gtp2_message_t *message)
     if (sess) {
         ogs_info("OLD Session Will Release [IMSI:%s,APN:%s]",
                 smf_ue->imsi_bcd, sess->session.name);
-        smf_sess_remove(sess);
+        ogs_expect(OGS_OK ==
+            smf_epc_pfcp_send_session_deletion_request(sess, NULL));
     }
 
     sess = smf_sess_add_by_apn(smf_ue, apn, req->rat_type.u8);
