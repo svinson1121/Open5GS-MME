@@ -220,11 +220,8 @@ static void _gtpv1_tun_recv_common_cb(
      * Metrics reduce data plane performance.
      * It should not be used on the UPF/SGW-U data plane
      * until this issue is resolved.
-     * 
-     * Update: Re-enabled for stat collection, issue may still
-     * exist.
      */
-#if 1
+#if 0
     upf_metrics_inst_global_inc(UPF_METR_GLOB_CTR_GTP_OUTDATAPKTN3UPF);
     upf_metrics_inst_by_qfi_add(pdr->qer->qfi,
         UPF_METR_CTR_GTP_OUTDATAVOLUMEQOSLEVELN3UPF, recvbuf->len);
@@ -417,11 +414,8 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
          * Metrics reduce data plane performance.
          * It should not be used on the UPF/SGW-U data plane
          * until this issue is resolved.
-         * 
-         * Update: Re-enabled for stat collection, issue may still
-         * exist.
          */
-#if 1
+#if 0
         upf_metrics_inst_global_inc(UPF_METR_GLOB_CTR_GTP_INDATAPKTN3UPF);
         upf_metrics_inst_by_qfi_add(qfi,
                 UPF_METR_CTR_GTP_INDATAVOLUMEQOSLEVELN3UPF, pkbuf->len);
