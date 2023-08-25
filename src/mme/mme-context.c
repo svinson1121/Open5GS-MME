@@ -1810,25 +1810,28 @@ int mme_context_parse_config(void)
                             ogs_assert(rv == OGS_OK);
                         }
 
-                        ogs_filter_ip_version(&addr,
-                                ogs_app()->parameter.no_ipv4,
-                                ogs_app()->parameter.no_ipv6,
-                                ogs_app()->parameter.prefer_ipv4);
+                        while (addr) {
+                            ogs_filter_ip_version(&addr,
+                                    ogs_app()->parameter.no_ipv4,
+                                    ogs_app()->parameter.no_ipv6,
+                                    ogs_app()->parameter.prefer_ipv4);
 
-                        if (addr == NULL) continue;
+                            if (addr == NULL) continue;
 
-                        sgw = mme_sgw_add(addr);
-                        ogs_assert(sgw);
+                            sgw = mme_sgw_add(addr);
+                            ogs_assert(sgw);
 
-                        sgw->num_of_tac = num_of_tac;
-                        if (num_of_tac != 0)
-                            memcpy(sgw->tac, tac, sizeof(sgw->tac));
+                            sgw->num_of_tac = num_of_tac;
+                            if (num_of_tac != 0)
+                                memcpy(sgw->tac, tac, sizeof(sgw->tac));
 
-                        sgw->num_of_e_cell_id = num_of_e_cell_id;
-                        if (num_of_e_cell_id != 0)
-                            memcpy(sgw->e_cell_id, e_cell_id,
-                                    sizeof(sgw->e_cell_id));
+                            sgw->num_of_e_cell_id = num_of_e_cell_id;
+                            if (num_of_e_cell_id != 0)
+                                memcpy(sgw->e_cell_id, e_cell_id,
+                                        sizeof(sgw->e_cell_id));
 
+                            addr = addr->next;
+                        }
                     } while (ogs_yaml_iter_type(&gtpc_array) ==
                             YAML_SEQUENCE_NODE);
                 }
@@ -2732,6 +2735,7 @@ static bool compare_ue_info(mme_sgw_t *node, enb_ue_t *enb_ue)
 
 static mme_sgw_t *selected_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue)
 {
+    char buf[OGS_ADDRSTRLEN];
     mme_sgw_t *next, *node, *random;
     int sgw_count;
     int index;
@@ -2754,6 +2758,11 @@ static mme_sgw_t *selected_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue)
     index = rand_under(sgw_count);
     ogs_debug("There are %i SGWs in our list, we have randomly picked the one at index %i", sgw_count, index);
     random = ogs_list_at(&mme_self()->sgw_list, index);
+
+    ogs_debug(
+        "SGWC address chosen was '%s'",
+        OGS_ADDR(random->gnode.sa_list, buf)
+    );
 
     return random;
 }
