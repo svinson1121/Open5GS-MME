@@ -2143,9 +2143,9 @@ ogs_sockaddr_t *mme_pgw_addr_select_random(ogs_list_t *list, int family)
     addr = addr_buf[index];
 
     ogs_info(
-        "PWG address chosen was '%s' (for family %i)",
-        OGS_ADDR(addr, buf),
-        family
+        "PWG address for family %i was '%s'",
+        family,
+        OGS_ADDR(addr, buf)
     );
 
     return addr;
@@ -2759,7 +2759,7 @@ static mme_sgw_t *selected_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue)
     ogs_debug("There are %i SGWs in our list, we have randomly picked the one at index %i", sgw_count, index);
     random = ogs_list_at(&mme_self()->sgw_list, index);
 
-    ogs_info(
+    ogs_debug(
         "SGWC address chosen was '%s'",
         OGS_ADDR(random->gnode.sa_list, buf)
     );

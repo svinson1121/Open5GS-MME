@@ -152,12 +152,8 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
         pgw_addr6 = mme_pgw_addr_find_by_apn(
                 &mme_self()->pgw_list, AF_INET6, session->name);
         if (!pgw_addr && !pgw_addr6) {
-            pgw_addr = mme_pgw_addr_select_random(
-                &mme_self()->pgw_list, AF_INET);
-            pgw_addr6 = mme_pgw_addr_select_random(
-                &mme_self()->pgw_list, AF_INET6);
-
-            ogs_assert(pgw_addr || pgw_addr6);
+            pgw_addr = mme_self()->pgw_addr;
+            pgw_addr6 = mme_self()->pgw_addr6;
         }
 
         rv = ogs_gtp2_sockaddr_to_f_teid(

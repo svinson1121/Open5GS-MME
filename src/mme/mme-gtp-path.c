@@ -180,6 +180,13 @@ int mme_gtp_open(void)
 
     OGS_SETUP_GTPC_SERVER;
 
+    mme_self()->pgw_addr = mme_pgw_addr_select_random(
+        &mme_self()->pgw_list, AF_INET);
+    mme_self()->pgw_addr6 = mme_pgw_addr_select_random(
+        &mme_self()->pgw_list, AF_INET6);
+
+    ogs_assert(mme_self()->pgw_addr || mme_self()->pgw_addr6);
+
     ogs_list_for_each(&mme_self()->sgw_list, sgw) {
         rv = ogs_gtp_connect(
                 ogs_gtp_self()->gtpc_sock, ogs_gtp_self()->gtpc_sock6,
