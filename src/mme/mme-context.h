@@ -113,8 +113,6 @@ typedef struct mme_context_s {
     mme_sgw_t       *sgw;           /* Iterator for SGW round-robin */
 
     ogs_list_t      pgw_list;       /* PGW GTPC Client List */
-    ogs_sockaddr_t  *pgw_addr;      /* First IPv4 Address Selected */
-    ogs_sockaddr_t  *pgw_addr6;     /* First IPv6 Address Selected */
 
     ogs_list_t      enb_list;       /* ENB S1AP Client List */
 
@@ -548,6 +546,10 @@ struct mme_ue_s {
 
     /* SGW UE context */
     sgw_ue_t        *sgw_ue;
+
+    /* The PGW that the SGW will use */
+    ogs_sockaddr_t  *pgw_addr;
+    ogs_sockaddr_t  *pgw_addr6;
 
     /* Save PDN Connectivity Request */
     ogs_nas_esm_message_container_t pdn_connectivity_request;

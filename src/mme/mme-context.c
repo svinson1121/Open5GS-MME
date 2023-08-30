@@ -66,6 +66,7 @@ static void stats_remove_mme_session(void);
 
 static bool compare_ue_info(mme_sgw_t *node, enb_ue_t *enb_ue);
 static mme_sgw_t *selected_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue);
+static mme_sgw_t *select_random_sgw(void);
 static mme_sgw_t *changed_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue);
 
 static int rand_under(int val);
@@ -1810,25 +1811,28 @@ int mme_context_parse_config(void)
                             ogs_assert(rv == OGS_OK);
                         }
 
-                        ogs_filter_ip_version(&addr,
-                                ogs_app()->parameter.no_ipv4,
-                                ogs_app()->parameter.no_ipv6,
-                                ogs_app()->parameter.prefer_ipv4);
+                        while (addr) {
+                            ogs_filter_ip_version(&addr,
+                                    ogs_app()->parameter.no_ipv4,
+                                    ogs_app()->parameter.no_ipv6,
+                                    ogs_app()->parameter.prefer_ipv4);
 
-                        if (addr == NULL) continue;
+                            if (addr == NULL) continue;
 
-                        sgw = mme_sgw_add(addr);
-                        ogs_assert(sgw);
+                            sgw = mme_sgw_add(addr);
+                            ogs_assert(sgw);
 
-                        sgw->num_of_tac = num_of_tac;
-                        if (num_of_tac != 0)
-                            memcpy(sgw->tac, tac, sizeof(sgw->tac));
+                            sgw->num_of_tac = num_of_tac;
+                            if (num_of_tac != 0)
+                                memcpy(sgw->tac, tac, sizeof(sgw->tac));
 
-                        sgw->num_of_e_cell_id = num_of_e_cell_id;
-                        if (num_of_e_cell_id != 0)
-                            memcpy(sgw->e_cell_id, e_cell_id,
-                                    sizeof(sgw->e_cell_id));
+                            sgw->num_of_e_cell_id = num_of_e_cell_id;
+                            if (num_of_e_cell_id != 0)
+                                memcpy(sgw->e_cell_id, e_cell_id,
+                                        sizeof(sgw->e_cell_id));
 
+                            addr = addr->next;
+                        }
                     } while (ogs_yaml_iter_type(&gtpc_array) ==
                             YAML_SEQUENCE_NODE);
                 }
@@ -2140,9 +2144,9 @@ ogs_sockaddr_t *mme_pgw_addr_select_random(ogs_list_t *list, int family)
     addr = addr_buf[index];
 
     ogs_info(
-        "PWG address for family %i was '%s'",
-        family,
-        OGS_ADDR(addr, buf)
+        "PWG address chosen was '%s' (for family %i)",
+        OGS_ADDR(addr, buf),
+        family
     );
 
     return addr;
@@ -2732,6 +2736,7 @@ static bool compare_ue_info(mme_sgw_t *node, enb_ue_t *enb_ue)
 
 static mme_sgw_t *selected_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue)
 {
+    char buf[OGS_ADDRSTRLEN];
     mme_sgw_t *next, *node, *random;
     int sgw_count;
     int index;
@@ -2754,6 +2759,32 @@ static mme_sgw_t *selected_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue)
     index = rand_under(sgw_count);
     ogs_debug("There are %i SGWs in our list, we have randomly picked the one at index %i", sgw_count, index);
     random = ogs_list_at(&mme_self()->sgw_list, index);
+
+    ogs_info(
+        "SGWC address chosen was '%s'",
+        OGS_ADDR(random->gnode.sa_list, buf)
+    );
+
+    return random;
+}
+
+static mme_sgw_t *select_random_sgw()
+{
+    char buf[OGS_ADDRSTRLEN];
+    mme_sgw_t *random;
+    int sgw_count;
+    int index;
+
+    /* Select a random sgw */
+    sgw_count = ogs_list_count(&mme_self()->sgw_list);
+    index = rand_under(sgw_count);
+    ogs_debug("There are %i SGWs in our list, we have randomly picked the one at index %i", sgw_count, index);
+    random = ogs_list_at(&mme_self()->sgw_list, index);
+
+    ogs_info(
+        "SGWC address chosen was '%s'",
+        OGS_ADDR(random->gnode.sa_list, buf)
+    );
 
     return random;
 }
@@ -2863,15 +2894,8 @@ mme_ue_t *mme_ue_add(enb_ue_t *enb_ue)
     ogs_hash_set(self.mme_s11_teid_hash,
             &mme_ue->mme_s11_teid, sizeof(mme_ue->mme_s11_teid), mme_ue);
 
-    /*
-     * When used for the first time, if last node is set,
-     * the search is performed from the first SGW in a round-robin manner.
-     */
-    if (mme_self()->sgw == NULL)
-        mme_self()->sgw = ogs_list_last(&mme_self()->sgw_list);
-
-    /* setup GTP path with selected SGW */
-    mme_self()->sgw = selected_sgw_node(mme_self()->sgw, enb_ue);
+    /* Select an SGW to use for this UE */
+    mme_self()->sgw = select_random_sgw();
     ogs_assert(mme_self()->sgw);
 
     sgw_ue = sgw_ue_add(mme_self()->sgw);
@@ -2880,7 +2904,14 @@ mme_ue_t *mme_ue_add(enb_ue_t *enb_ue)
 
     sgw_ue_associate_mme_ue(sgw_ue, mme_ue);
 
-    ogs_debug("UE using SGW on IP[%s]", OGS_ADDR(sgw_ue->gnode->sa_list, buf));
+    /* Select the PGW that the SGW will use for this UE */
+    mme_ue->pgw_addr = mme_pgw_addr_select_random(
+                &mme_self()->pgw_list, AF_INET);
+    mme_ue->pgw_addr6 = mme_pgw_addr_select_random(
+        &mme_self()->pgw_list, AF_INET6);
+
+    ogs_info("UE using SGW on IP[%s]", OGS_ADDR(sgw_ue->gnode->sa_list, buf));
+    ogs_info("UE using PGW on IP[%s]", OGS_ADDR(mme_ue->pgw_addr, buf));
 
     /* Clear VLR */
     mme_ue->csmap = NULL;

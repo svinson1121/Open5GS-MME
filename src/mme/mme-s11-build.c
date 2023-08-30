@@ -147,13 +147,17 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
         ogs_sockaddr_t *pgw_addr = NULL;
         ogs_sockaddr_t *pgw_addr6 = NULL;
 
-        pgw_addr = mme_pgw_addr_find_by_apn(
-                &mme_self()->pgw_list, AF_INET, session->name);
-        pgw_addr6 = mme_pgw_addr_find_by_apn(
-                &mme_self()->pgw_list, AF_INET6, session->name);
+        /* If UE already has a designated PGW use that */
+        pgw_addr = mme_ue->pgw_addr;
+        pgw_addr6 = mme_ue->pgw_addr6;
+
         if (!pgw_addr && !pgw_addr6) {
-            pgw_addr = mme_self()->pgw_addr;
-            pgw_addr6 = mme_self()->pgw_addr6;
+            pgw_addr = mme_pgw_addr_find_by_apn(
+                    &mme_self()->pgw_list, AF_INET, session->name);
+            pgw_addr6 = mme_pgw_addr_find_by_apn(
+                    &mme_self()->pgw_list, AF_INET6, session->name);
+
+            ogs_assert(pgw_addr || pgw_addr6);
         }
 
         rv = ogs_gtp2_sockaddr_to_f_teid(
