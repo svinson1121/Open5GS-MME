@@ -883,8 +883,10 @@ static int send_to_downlink_default(mme_ue_t *mme_ue) {
             &mme_self()->short_name, sizeof(ogs_nas_network_name_t));
     }
 
-    emm_information->presencemask |=
-        OGS_NAS_EPS_EMM_INFORMATION_LOCAL_TIME_ZONE_PRESENT;
+    if (true == mme_self()->include_local_time_zone) {
+        emm_information->presencemask |=
+            OGS_NAS_EPS_EMM_INFORMATION_LOCAL_TIME_ZONE_PRESENT;
+    }
 
     if (local.tm_gmtoff >= 0) {
         *local_time_zone = OGS_NAS_TIME_TO_BCD(local.tm_gmtoff / 900);

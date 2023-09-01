@@ -199,6 +199,7 @@ typedef struct mme_context_s {
     char dns_base_domain[MAX_DNS_BASE_DOMAIN_NAME];
 
     uint8_t daylight_saving_time_adjustment;
+    bool include_local_time_zone;
 
 } mme_context_t;
 

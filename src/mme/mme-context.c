@@ -1670,6 +1670,17 @@ int mme_context_parse_config(void)
                     if (c_daylight_saving_time_adjustment) {
                         self.daylight_saving_time_adjustment = atoi(c_daylight_saving_time_adjustment);
                     }
+                } else if (!strcmp(mme_key, "include_local_time_zone")) {
+                    const char *c_include_local_time_zone = ogs_yaml_iter_value(&mme_iter);
+
+                    if (!strcmp("True", c_include_local_time_zone) || 
+                        !strcmp("true", c_include_local_time_zone)) {
+                        ogs_info("Local time IE will be included in NAS-PDU messages");
+                        self.include_local_time_zone = true;
+                    } else {
+                        ogs_info("Local time IE will not be included in NAS-PDU messages");
+                        self.include_local_time_zone = false;
+                    }
                 } else
                     ogs_warn("unknown key `%s`", mme_key);
             }
