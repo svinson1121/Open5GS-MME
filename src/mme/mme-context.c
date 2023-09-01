@@ -1664,12 +1664,6 @@ int mme_context_parse_config(void)
                             ogs_warn("unknown key `%s`", dns_key);
                         }
                     }
-                } else if (!strcmp(mme_key, "daylight_saving_time_adjustment")) {
-                    const char *c_daylight_saving_time_adjustment = ogs_yaml_iter_value(&mme_iter);
-
-                    if (c_daylight_saving_time_adjustment) {
-                        self.daylight_saving_time_adjustment = atoi(c_daylight_saving_time_adjustment);
-                    }
                 } else if (!strcmp(mme_key, "include_local_time_zone")) {
                     const char *c_include_local_time_zone = ogs_yaml_iter_value(&mme_iter);
 
