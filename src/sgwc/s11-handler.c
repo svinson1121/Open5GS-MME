@@ -1035,9 +1035,8 @@ void sgwc_s11_handle_delete_bearer_response(
      ********************/
     ogs_assert(s11_xact);
     s5c_xact = s11_xact->assoc_xact;
-    ogs_assert(s5c_xact);
 
-    if (s11_xact->xid & OGS_GTP_CMD_XACT_ID)
+    if ((s11_xact->xid & OGS_GTP_CMD_XACT_ID) && (NULL != s5c_xact))
         /* MME received Bearer Resource Modification Request */
         bearer = s5c_xact->data;
     else
@@ -1053,7 +1052,15 @@ void sgwc_s11_handle_delete_bearer_response(
     /************************
      * Check SGWC-UE Context
      ************************/
-    cause_value = OGS_GTP2_CAUSE_REQUEST_ACCEPTED;
+
+    if (rsp->cause.presence) {
+        ogs_gtp2_cause_t *cause = rsp->cause.data;
+        ogs_assert(cause);
+
+        cause_value = cause->value;
+    } else {
+        cause_value = OGS_GTP2_CAUSE_REQUEST_ACCEPTED;
+    }
 
     if (rsp->linked_eps_bearer_id.presence) {
        /*
@@ -1068,10 +1075,6 @@ void sgwc_s11_handle_delete_bearer_response(
         * 2. ePDG sends Delete Bearer Response(DEFAULT BEARER) to SMF.
         */
         if (rsp->cause.presence) {
-            ogs_gtp2_cause_t *cause = rsp->cause.data;
-            ogs_assert(cause);
-
-            cause_value = cause->value;
             if (cause_value == OGS_GTP2_CAUSE_REQUEST_ACCEPTED) {
             } else {
                 ogs_error("GTP Cause [Value:%d]", cause_value);
@@ -1080,8 +1083,14 @@ void sgwc_s11_handle_delete_bearer_response(
             ogs_error("No Cause");
         }
 
+        /* Release entire session: */
         ogs_assert(OGS_OK ==
-            sgwc_pfcp_send_session_deletion_request(sess, s5c_xact, gtpbuf));
+            sgwc_pfcp_send_session_deletion_request(sess, NULL, NULL));
+    } else if ((1 == rsp->cause.presence) &&
+               (OGS_GTP2_CAUSE_CONTEXT_NOT_FOUND == cause_value)) {
+        /* Release entire session: */
+        ogs_assert(OGS_OK ==
+            sgwc_pfcp_send_session_deletion_request(sess, NULL, NULL));
     } else {
        /*
         * << EPS Bearer IDs >>
@@ -1103,13 +1112,9 @@ void sgwc_s11_handle_delete_bearer_response(
         }
 
         if (rsp->cause.presence) {
-            ogs_gtp2_cause_t *cause = rsp->cause.data;
-            ogs_assert(cause);
-
-            cause_value = cause->value;
             if (cause_value == OGS_GTP2_CAUSE_REQUEST_ACCEPTED) {
                 if (rsp->bearer_contexts.cause.presence) {
-                    cause = rsp->bearer_contexts.cause.data;
+                    ogs_gtp2_cause_t *cause = rsp->bearer_contexts.cause.data;
                     ogs_assert(cause);
 
                     if (cause_value == OGS_GTP2_CAUSE_REQUEST_ACCEPTED) {
@@ -1131,7 +1136,7 @@ void sgwc_s11_handle_delete_bearer_response(
         ogs_debug("    SGW_S5C_TEID[0x%x] PGW_S5C_TEID[0x%x]",
             sess->sgw_s5c_teid, sess->pgw_s5c_teid);
 
-        ogs_assert(OGS_OK ==
+        ogs_expect(OGS_OK ==
             sgwc_pfcp_send_bearer_modification_request(
                 bearer, s5c_xact, gtpbuf, OGS_PFCP_MODIFY_REMOVE));
     }
@@ -1180,7 +1185,7 @@ void sgwc_s11_handle_release_access_bearers_request(
 
     ogs_list_for_each(&sgwc_ue->sess_list, sess) {
 
-        ogs_assert(OGS_OK ==
+        ogs_expect(OGS_OK ==
             sgwc_pfcp_send_session_modification_request(
                 sess, s11_xact, gtpbuf,
                 OGS_PFCP_MODIFY_DL_ONLY|OGS_PFCP_MODIFY_DEACTIVATE));

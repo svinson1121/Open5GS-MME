@@ -1304,6 +1304,36 @@ void smf_n4_handle_session_report_request(
                 sess->gy.ul_octets += volume.uplink_volume;
             if (volume.dlvol)
                 sess->gy.dl_octets += volume.downlink_volume;
+
+            /* Refresh the bearer deactivation timer when data has been used
+             * See smf/context.c for more context */
+            /* TODO: Switch to using report_type.user_plane_inactivity_report
+             * at some point */
+            if (60 <= smf_self()->bearer_deactivation_timer_sec)
+            {
+                const char *apn = "unknown";
+                if (bearer->sess)
+                    apn = bearer->sess->session.name;
+
+                if ((1 == volume.ulvol) &&
+                    (0 < volume.uplink_volume))
+                {
+                    ogs_info("[APN: '%s'] Bearer used %li octets of uplink data, refreshing bearer deactivate timer", apn, volume.uplink_volume);
+                    ogs_timer_start(bearer->timer_bearer_deactivation,
+                        ogs_time_from_sec(smf_self()->bearer_deactivation_timer_sec));
+                }
+                else if ((1 == volume.dlvol) &&
+                         (0 < volume.downlink_volume))
+                {
+                    ogs_info("[APN: '%s'] Bearer used %li octets of downlink data, refreshing bearer deactivate timer", apn, volume.downlink_volume);
+                    ogs_timer_start(bearer->timer_bearer_deactivation,
+                        ogs_time_from_sec(smf_self()->bearer_deactivation_timer_sec));
+                }
+                else {
+                    ogs_info("[APN: '%s'] Bearer used no octets of data", apn);
+                }
+            }
+
             sess->gy.duration += use_rep->duration_measurement.u32;
             ogs_pfcp_parse_usage_report_trigger(
                     &rep_trig, &use_rep->usage_report_trigger);

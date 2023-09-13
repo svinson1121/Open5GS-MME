@@ -42,6 +42,7 @@ static int num_of_smf_sess = 0;
 
 static void stats_add_smf_session(void);
 static void stats_remove_smf_session(smf_sess_t *sess);
+static void smf_timer_bearer_deactivation_expire(void* data);
 
 int smf_ctf_config_init(smf_ctf_config_t *ctf_config)
 {
@@ -1009,6 +1010,12 @@ int smf_context_parse_config(void)
                             }
                         } else
                             ogs_warn("unknown key `%s`", smf_key);
+                    }
+                } else if (!strcmp(smf_key, "bearer_deactivation_timer_sec")) {
+                    const char *c_bearer_deactivation_timer_sec = ogs_yaml_iter_value(&smf_iter);
+
+                    if (c_bearer_deactivation_timer_sec) {
+                        self.bearer_deactivation_timer_sec = atoi(c_bearer_deactivation_timer_sec);
                     }
                 } else
                     ogs_warn("unknown key `%s`", smf_key);
@@ -2430,6 +2437,7 @@ smf_bearer_t *smf_bearer_add(smf_sess_t *sess)
     ogs_pfcp_pdr_t *ul_pdr = NULL;
     ogs_pfcp_far_t *dl_far = NULL;
     ogs_pfcp_far_t *ul_far = NULL;
+    ogs_pfcp_urr_t *urr = NULL;
 
     ogs_assert(sess);
 
@@ -2440,6 +2448,16 @@ smf_bearer_t *smf_bearer_add(smf_sess_t *sess)
     smf_pf_identifier_pool_init(bearer);
 
     ogs_list_init(&bearer->pf_list);
+
+    /* Add timers */
+    bearer->timer_bearer_deactivation = ogs_timer_add(
+            ogs_app()->timer_mgr, smf_timer_bearer_deactivation_expire, bearer);
+
+    if (!bearer->timer_bearer_deactivation) {
+        ogs_error("ogs_timer_add() failed");
+        ogs_pool_free(&smf_bearer_pool, bearer);
+        return NULL;
+    }
 
     /* PDR */
     dl_pdr = ogs_pfcp_pdr_add(&sess->pfcp);
@@ -2504,6 +2522,37 @@ smf_bearer_t *smf_bearer_add(smf_sess_t *sess)
 
     ul_far->apply_action = OGS_PFCP_APPLY_ACTION_FORW;
 
+    /* URR */
+    /* Include a URR to check bearer is still being used,
+     * minimum deactivation timer is a minute */
+    if (60 <= smf_self()->bearer_deactivation_timer_sec) {
+        const char *apn = "unknown";
+        
+        urr = ogs_pfcp_urr_add(&sess->pfcp);
+        ogs_assert(urr);
+        bearer->urr = urr;
+
+        /* TODO: We should switch to urr->rep_triggers.user_plane_inactivity_timer 
+         * at some point. See TS 129.244 8.2.41 for more context */
+        urr->meas_method = OGS_PFCP_MEASUREMENT_METHOD_DURATION;
+        urr->rep_triggers.time_threshold = 1;
+        /* 30 sec buffer between the bearer timer and the usage report */
+        urr->time_threshold = smf_self()->bearer_deactivation_timer_sec - 30;
+        /* Enable Immediate Start Time Metering */
+        urr->meas_info.istm = 1;
+    
+        ogs_pfcp_pdr_associate_urr(dl_pdr, urr);
+        ogs_pfcp_pdr_associate_urr(ul_pdr, urr);
+
+        if (bearer->sess)
+            apn = bearer->sess->session.name;
+
+        ogs_info("[APN: '%s'] Starting deactivation timer for bearer, see you in %i seconds", apn, urr->time_threshold);
+
+        ogs_timer_start(bearer->timer_bearer_deactivation,
+                    ogs_time_from_sec(smf_self()->bearer_deactivation_timer_sec));
+    }
+
     bearer->sess = sess;
 
     ogs_list_add(&sess->bearer_list, bearer);
@@ -2547,6 +2596,10 @@ int smf_bearer_remove(smf_bearer_t *bearer)
 
     if (SMF_IS_QOF_FLOW(bearer))
         ogs_pool_free(&bearer->sess->qfi_pool, bearer->qfi_node);
+
+    /* Remove all bearer timers */
+    ogs_timer_stop(bearer->timer_bearer_deactivation);
+    ogs_timer_delete(bearer->timer_bearer_deactivation);
 
     ogs_pool_free(&smf_bearer_pool, bearer);
 
@@ -3204,4 +3257,24 @@ int smf_maximum_integrity_protected_data_rate_downlink_value2enum(
 {
     ogs_assert(value);
     return smf_maximum_integrity_protected_data_rate_uplink_value2enum(value);
+}
+
+static void smf_timer_bearer_deactivation_expire(void* data) {
+    const char *apn = "unknown";
+    
+    smf_bearer_t *bearer = (smf_bearer_t*)data;
+    ogs_assert(bearer);
+
+    if (bearer->sess)
+        apn = bearer->sess->session.name;
+
+    ogs_info("[APN: '%s'] Bearer deactivation timer has expired... Deactivating bearer", apn);
+    
+    ogs_assert(OGS_OK ==
+        smf_gtp2_send_delete_bearer_request(
+            bearer,
+            OGS_NAS_PROCEDURE_TRANSACTION_IDENTITY_UNASSIGNED,
+            OGS_GTP2_CAUSE_PDN_CONNECTION_INACTIVITY_TIMER_EXPIRES
+        )
+    );
 }
