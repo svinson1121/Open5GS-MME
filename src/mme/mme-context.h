@@ -102,7 +102,7 @@ typedef struct {
 
 typedef struct {
     uint16_t tac;
-    int gmt_modifier;
+    int gmt_modifier_sec;
 } mme_tac_timezone_map_t;
 
 typedef struct mme_context_s {
