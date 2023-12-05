@@ -919,6 +919,7 @@ bool mme_ue_have_session_release_pending(mme_ue_t *mme_ue);
 bool mme_sess_have_session_release_pending(mme_sess_t *sess);
 
 int mme_ue_xact_count(mme_ue_t *mme_ue, uint8_t org);
+bool mme_ue_is_roaming(mme_ue_t *mme_ue);
 
 /*
  * o RECV Initial UE-Message : S-TMSI
