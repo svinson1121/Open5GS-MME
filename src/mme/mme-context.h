@@ -921,7 +921,6 @@ bool mme_ue_have_active_eps_bearers(mme_ue_t *mme_ue);
 bool mme_sess_have_active_eps_bearers(mme_sess_t *sess);
 bool mme_ue_have_session_release_pending(mme_ue_t *mme_ue);
 bool mme_sess_have_session_release_pending(mme_sess_t *sess);
-mme_sess_t *mme_sess_cycle(mme_sess_t *sess);
 
 int mme_ue_xact_count(mme_ue_t *mme_ue, uint8_t org);
 
@@ -997,6 +996,7 @@ mme_sess_t *mme_sess_find_by_apn(mme_ue_t *mme_ue, char *apn);
 mme_sess_t *mme_sess_first(mme_ue_t *mme_ue);
 mme_sess_t *mme_sess_next(mme_sess_t *sess);
 unsigned int mme_sess_count(mme_ue_t *mme_ue);
+mme_sess_t *mme_sess_cycle(mme_sess_t *sess);
 
 mme_bearer_t *mme_bearer_add(mme_sess_t *sess);
 void mme_bearer_remove(mme_bearer_t *bearer);

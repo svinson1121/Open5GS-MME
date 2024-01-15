@@ -253,6 +253,11 @@ sgwc_ue_t *sgwc_ue_add(uint8_t *imsi, int imsi_len)
     return sgwc_ue;
 }
 
+sgwc_ue_t *sgwc_ue_cycle(sgwc_ue_t *sgwc_ue)
+{
+    return ogs_pool_cycle(&sgwc_ue_pool, sgwc_ue);
+}
+
 int sgwc_ue_remove(sgwc_ue_t *sgwc_ue)
 {
     ogs_assert(sgwc_ue);
@@ -534,11 +539,6 @@ sgwc_sess_t *sgwc_sess_find_by_ebi(sgwc_ue_t *sgwc_ue, uint8_t ebi)
 sgwc_sess_t *sgwc_sess_cycle(sgwc_sess_t *sess)
 {
     return ogs_pool_cycle(&sgwc_sess_pool, sess);
-}
-
-sgwc_ue_t *sgwc_ue_cycle(sgwc_ue_t *sgwc_ue)
-{
-    return ogs_pool_cycle(&sgwc_ue_pool, sgwc_ue);
 }
 
 int sgwc_sess_pfcp_xact_count(

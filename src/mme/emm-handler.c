@@ -322,7 +322,6 @@ int emm_handle_identity_response(
         }
 
         ogs_info("    IMSI[%s]", mme_ue->imsi_bcd);
-
     } else {
         ogs_warn("Not supported Identity type[%d]", mobile_identity->imsi.type);
     }

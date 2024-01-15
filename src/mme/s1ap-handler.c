@@ -1345,7 +1345,7 @@ void s1ap_handle_e_rab_setup_response(
     }
 }
 
-void s1ap_handle_ue_context_release_request( // 
+void s1ap_handle_ue_context_release_request(
         mme_enb_t *enb, ogs_s1ap_message_t *message)
 {
     char buf[OGS_ADDRSTRLEN];

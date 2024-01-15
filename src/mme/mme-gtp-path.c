@@ -250,7 +250,7 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
             if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
                 ogs_sockaddr_t *sgw_addr = NULL;
 
-                ogs_info("NAPTR resolve success, PGW address is '%s'", ipv4);
+                ogs_info("NAPTR resolve success, SGW address is '%s'", ipv4);
 
                 ogs_addaddrinfo(
                     &sgw_addr,
@@ -267,7 +267,7 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
                         sgw = mme_sgw_add(sgw_addr);
                     }
                 } else {
-                    ogs_error("Failed to set PGW address to '%s', falling back to default selection method", ipv4);
+                    ogs_error("Failed to set SGW address to '%s', falling back to default selection method", ipv4);
                 }
             }
             else {
@@ -289,7 +289,6 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
 
     /* If this is a SOS APN the we want to set the address in the session to a local PGW */
     if (0 == strcmp(session->name, "sos")) {
-        ogs_debug("We have a sos session, setting the pgw address to a random local");
         /* The sessions PGW is of higher priority it will be the one chosen in mme_s11_build_create_session_request */
         if ((NULL == session->pgw_addr) && (NULL == session->pgw_addr6)) {
             session->pgw_addr = mme_pgw_addr_select_random(

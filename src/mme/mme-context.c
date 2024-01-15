@@ -3054,7 +3054,7 @@ void sgw_ue_remove(sgw_ue_t *sgw_ue)
 
     if (NULL == sgw_ue) {
         /* If the sgw_ue was never set we don't need to do anything */
-        ogs_debug("sgw_ue_remove called with NULL sgw_ue");
+        ogs_fatal("Trying to remove sgw_ue that doesn't exist!");
         return;
     }
 
@@ -3367,11 +3367,9 @@ void mme_ue_remove(mme_ue_t *mme_ue)
     mme_ue = mme_ue_cycle(mme_ue);
 
     if (NULL == mme_ue) {
-        ogs_fatal("Was trying to remove a mme that doesnt exist!");
+        ogs_fatal("Trying to remove mme_ue that doesn't exist!");
         return;
     }
-
-    ogs_assert(mme_ue);
 
     ogs_list_remove(&self.mme_ue_list, mme_ue);
 
@@ -3421,21 +3419,11 @@ void mme_ue_remove(mme_ue_t *mme_ue)
     enb_ue_unlink(mme_ue);
 
     mme_sess_remove_all(mme_ue);
-
-    ogs_info("before mme_sess_remove_all(mme_ue);");
-    mme_sess_remove_all(mme_ue); // maybe? 
-    ogs_info("after mme_sess_remove_all(mme_ue);");
+    mme_session_remove_all(mme_ue);
 
     mme_ebi_pool_final(mme_ue);
 
-    ogs_info("after ebi pool final");
-    if (NULL == mme_ue->mme_s11_teid_node) {
-        ogs_fatal("was trying to free mme_ue->mme_s11_teid_node which doesnt exist!");
-    } else {
-        ogs_debug("trying to free mme_ue->mme_s11_teid_node = %p/%d", mme_ue->mme_s11_teid_node, *mme_ue->mme_s11_teid_node);
-        ogs_pool_free(&mme_s11_teid_pool, mme_ue->mme_s11_teid_node); // this is crashing things
-    }
-    ogs_info("after pool free s11 teid");
+    ogs_pool_free(&mme_s11_teid_pool, mme_ue->mme_s11_teid_node);
 
     /* Clear mme_ue so if pointer is used again use-after-free is easier to detect */
     memset(mme_ue, 0, sizeof(*mme_ue));
@@ -3871,11 +3859,6 @@ bool mme_sess_have_session_release_pending(mme_sess_t *sess)
     return false;
 }
 
-mme_sess_t *mme_sess_cycle(mme_sess_t *sess)
-{
-    return ogs_pool_cycle(&mme_sess_pool, sess);
-}
-
 int mme_ue_xact_count(mme_ue_t *mme_ue, uint8_t org)
 {
     sgw_ue_t *sgw_ue = NULL;
@@ -3927,12 +3910,11 @@ bool imsi_is_roaming(ogs_nas_mobile_identity_imsi_t *nas_imsi)
                 (ue_mnc_3_digit == home_mnc)) 
             {
                 /* Is not roaming */
-ogs_info("not a roaming sim!");
     		    return false;
             }
         }
     }
-ogs_info("is a roaming sim!");
+
     /* Must be roaming */
     return true;
 }
@@ -4192,6 +4174,11 @@ unsigned int mme_sess_count(mme_ue_t *mme_ue)
     }
 
     return count;
+}
+
+mme_sess_t *mme_sess_cycle(mme_sess_t *sess)
+{
+    return ogs_pool_cycle(&mme_sess_pool, sess);
 }
 
 mme_bearer_t *mme_bearer_add(mme_sess_t *sess)
@@ -4533,10 +4520,8 @@ void mme_session_remove_all(mme_ue_t *mme_ue)
     ogs_assert(mme_ue);
 
     ogs_assert(mme_ue->num_of_session <= OGS_MAX_NUM_OF_SESS);
-    ogs_debug("mme_ue->num_of_session: %d", mme_ue->num_of_session);
     for (i = 0; i < mme_ue->num_of_session; i++) {
         if (mme_ue->session[i].name) {
-            ogs_debug("mme_ue->session[%i].name = '%s'", i, mme_ue->session[i].name);
             ogs_free(mme_ue->session[i].name);
         }
     }
@@ -4745,24 +4730,7 @@ void mme_ebi_pool_final(mme_ue_t *mme_ue)
 {
     ogs_assert(mme_ue);
 
-    ogs_info("finalising the pool...");
-    ogs_info("(&mme_ue->ebi_pool)->size = %i", (&mme_ue->ebi_pool)->size);
-    ogs_info("(&mme_ue->ebi_pool)->avail = %i", (&mme_ue->ebi_pool)->avail);
-    ogs_info("calling ogs_talloc_free(%p)", (&mme_ue->ebi_pool)->free);
-    ogs_info("calling ogs_talloc_free(%p)", (&mme_ue->ebi_pool)->array);
-    ogs_info("calling ogs_talloc_free(%p)", (&mme_ue->ebi_pool)->index);
-
-    if ((0 == (&mme_ue->ebi_pool)->free) ||
-        (0 == (&mme_ue->ebi_pool)->array) ||
-        (0 == (&mme_ue->ebi_pool)->index)) 
-    {
-        ogs_fatal("This potential double free detected!");
-    }
-
     ogs_pool_final(&mme_ue->ebi_pool);
-    ogs_info("pool has been finalised!");
-    memset(&mme_ue->ebi_pool, 0, sizeof(mme_ue->ebi_pool));
-
 }
 
 void mme_ebi_pool_clear(mme_ue_t *mme_ue)

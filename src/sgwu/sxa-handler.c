@@ -355,7 +355,7 @@ void sgwu_sxa_handle_session_modification_request(
                 xact, sess, NULL, 0, NULL));
     else
         ogs_assert(OGS_OK ==
-            sgwu_pfcp_send_session_modification_response(     //this should be the thing that send that usage data
+            sgwu_pfcp_send_session_modification_response(
                 xact, sess, created_pdr, num_of_created_pdr, &report));
     return;
 

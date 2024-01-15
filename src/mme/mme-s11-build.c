@@ -123,7 +123,6 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
     pgw_s5c_teid.teid = htobe32(sess->pgw_s5c_teid);
 
     if (session->smf_ip.ipv4 || session->smf_ip.ipv6) {
-        ogs_debug("session->smf_ip exsits so were gonna use that bad boy");
         pgw_s5c_teid.ipv4 = session->smf_ip.ipv4;
         pgw_s5c_teid.ipv6 = session->smf_ip.ipv6;
         if (pgw_s5c_teid.ipv4 && pgw_s5c_teid.ipv6) {
@@ -147,7 +146,6 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
             &pgw_s5c_teid;
 
     } else if ((NULL != session->pgw_addr) || (NULL != session->pgw_addr6)) {
-        ogs_debug("session->pgw_addr exsits so were gonna use that bad boy");
         ogs_sockaddr_t *pgw_addr = NULL;
         ogs_sockaddr_t *pgw_addr6 = NULL;
 
@@ -162,9 +160,10 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
         req->pgw_s5_s8_address_for_control_plane_or_pmip.len = len;
 
     } else {
-        ogs_fatal("session->pgw_addr = %p, session->pgw_addr6 = %p", session->pgw_addr, session->pgw_addr6);
         ogs_sockaddr_t *pgw_addr = NULL;
         ogs_sockaddr_t *pgw_addr6 = NULL;
+        
+        ogs_error("Expecting a PGW address to be set but one wasn't...");
 
         session->pgw_addr = mme_pgw_addr_find_by_apn(
                 &mme_self()->pgw_list, AF_INET, session->name);
@@ -186,7 +185,7 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
     /* Update the apn to use the following format: <apn>.mncXXX.mccYYY.gprs */
     if (imsi_is_roaming(&mme_ue->nas_mobile_identity_imsi)) {
         /* Change the ANP */
-        char edited[OGS_MAX_APN_LEN+1] = "";
+        char roaming_apn[OGS_MAX_APN_LEN+1] = "";
 
         uint16_t ue_mcc = 100 * mme_ue->nas_mobile_identity_imsi.digit1 +
                           10 * mme_ue->nas_mobile_identity_imsi.digit2 +
@@ -197,7 +196,7 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
                           1 * mme_ue->nas_mobile_identity_imsi.digit6;
 
         snprintf(
-            edited,
+            roaming_apn,
             OGS_MAX_APN_LEN,
             "%s.mnc%03u.mcc%03u.gprs",
             session->name,
@@ -206,7 +205,7 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
         );
 
         req->access_point_name.len = ogs_fqdn_build(
-                apn, edited, strlen(edited));
+                apn, roaming_apn, strlen(roaming_apn));
     } else {
         req->access_point_name.len = ogs_fqdn_build(
                 apn, session->name, strlen(session->name));
@@ -540,7 +539,7 @@ ogs_pkbuf_t *mme_s11_build_delete_session_request(
     bearer = mme_default_bearer_in_sess(sess);
     ogs_assert(bearer);
 
-    ogs_info("Delete Session Request");
+    ogs_debug("Delete Session Request");
 
     memset(&gtp_message, 0, sizeof(ogs_gtp2_message_t));
 
