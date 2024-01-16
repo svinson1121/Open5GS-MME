@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
+#include <ogs-core.h>
 
 enum
 {
@@ -59,7 +60,8 @@ typedef struct
     uint16_t tac;
     uint32_t eci;
     char sgw_ip[IP_STR_MAX_LEN];
-    char ue_ip[IP_STR_MAX_LEN];
+    char ue_ipv4[OGS_ADDRSTRLEN];
+    char ue_ipv6[OGS_ADDRSTRLEN];
     char pgw_ip[IP_STR_MAX_LEN];
     bool dedicated_bearer;
 } UsageLoggerData;

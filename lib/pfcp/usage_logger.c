@@ -49,7 +49,7 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 "%u,"    /* tac */
                 "%u,"    /* eci */
                 "%s,"    /* sgw_ip */
-                "%s,"    /* ue_ip */
+                "%s|%s," /* ue_ipv4|ue_ipv6 */
                 "%s,"    /* pgw_ip */
                 "%s,"    /* apn */
                 "%u,"    /* qci */
@@ -67,7 +67,8 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 data.tac,
                 data.eci,
                 data.sgw_ip,
-                data.ue_ip,
+                data.ue_ipv4,
+                data.ue_ipv6,
                 data.pgw_ip,
                 data.apn,
                 data.qci,

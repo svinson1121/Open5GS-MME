@@ -1756,7 +1756,7 @@ static void log_deletion_usage_reports_session_modification_response(sgwc_sess_t
             continue;
         }
 
-        usageLoggerData = build_usage_logger_data(bearer, "session_end", volume.uplink_volume, volume.downlink_volume);
+        usageLoggerData = build_usage_logger_data(bearer, "end", volume.uplink_volume, volume.downlink_volume);
         log_usage_logger_data(usageLoggerData);
     }
 }
@@ -1789,9 +1789,8 @@ static UsageLoggerData build_usage_logger_data(sgwc_bearer_t *bearer, char const
     usageLoggerData.plmn = ogs_plmn_id_hexdump(&sgwc_ue->e_tai.plmn_id);
     usageLoggerData.tac = sgwc_ue->e_tai.tac;
     usageLoggerData.eci = sgwc_ue->e_cgi.cell_id;
-    if (!hex_array_to_string(sess->ue_ip_raw, sess->ue_ip_raw_len, usageLoggerData.ue_ip, IP_STR_MAX_LEN)) {
-        ogs_error("Failed to convert raw IP bytes to IP hex string!");
-    }
+    memcpy(usageLoggerData.ue_ipv4, sess->ue_ipv4, OGS_ADDRSTRLEN);
+    memcpy(usageLoggerData.ue_ipv6, sess->ue_ipv6, OGS_ADDRSTRLEN);
     if (!hex_array_to_string(sess->pgw_ip_raw, sess->pgw_ip_raw_len, usageLoggerData.pgw_ip, IP_STR_MAX_LEN)) {
         ogs_error("Failed to convert raw IP bytes to IP hex string!");
     }

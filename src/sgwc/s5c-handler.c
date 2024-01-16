@@ -148,8 +148,8 @@ void sgwc_s5c_handle_create_session_response(
                     paa.session_type, session_cause);
             cause_value = OGS_GTP2_CAUSE_MANDATORY_IE_INCORRECT;
         } else {
-            sess->ue_ip_raw_len = ogs_min(sizeof(paa), rsp->pdn_address_allocation.len);
-            memcpy(sess->ue_ip_raw, rsp->pdn_address_allocation.data, sess->ue_ip_raw_len);
+            ogs_ipv4_to_string_stack(paa.addr, sess->ue_ipv4);
+            ogs_ipv6addr_to_string_stack(paa.addr6, sess->ue_ipv6);
         }
 
     } else {
