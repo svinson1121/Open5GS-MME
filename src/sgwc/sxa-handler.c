@@ -595,7 +595,9 @@ void sgwc_sxa_handle_session_modification_response(
             }
         }
 
-        log_deletion_usage_reports_session_modification_response(sess, pfcp_rsp);
+        if (ogs_pfcp_self()->usageLoggerState.enabled) {
+            log_deletion_usage_reports_session_modification_response(sess, pfcp_rsp);
+        }
 
         cause_value = gtp_cause_from_pfcp(pfcp_cause_value);
         sgwc_metrics_inst_global_inc(SGWC_METR_GLOB_CTR_SM_MODIFYPFCPSESSIONSUCC);
@@ -1387,7 +1389,9 @@ void sgwc_sxa_handle_session_deletion_response(
     sgwc_ue = sess->sgwc_ue;
     ogs_assert(sgwc_ue);
 
-    log_deletion_usage_reports_session_deletion_response(sess, pfcp_rsp);
+    if (ogs_pfcp_self()->usageLoggerState.enabled) {
+        log_deletion_usage_reports_session_deletion_response(sess, pfcp_rsp);
+    }
 
     if (gtp_xact) {
         /*
@@ -1550,7 +1554,9 @@ void sgwc_sxa_handle_session_report_request(
             ogs_error("Cannot find Session in Error Indication");
 
     } else if (report_type.usage_report) {
-        handle_usage_reports(sess, pfcp_req);
+        if (ogs_pfcp_self()->usageLoggerState.enabled) {
+            handle_usage_reports(sess, pfcp_req);
+        }
     } else {
         ogs_error("Not supported Report Type[%d]", report_type.value);
     }

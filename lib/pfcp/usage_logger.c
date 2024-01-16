@@ -57,7 +57,7 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 "%lu\n", /* octets_out */
                 current_epoch_sec,
                 data.imsi,
-                data.dedicated_bearer ? "dedicated_bearer_" : "bearer_",
+                data.dedicated_bearer ? "dedicated_bearer_" : "default_bearer_",
                 data.event,
                 data.charging_id,
                 data.msisdn_bcd,
