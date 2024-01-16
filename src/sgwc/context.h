@@ -118,7 +118,6 @@ typedef struct sgwc_sess_s {
     int timezone_raw_len;
 
     /* UE IP */
-    int ue_ip_raw_len;
     char ue_ipv4[OGS_ADDRSTRLEN];
     char ue_ipv6[OGS_ADDRSTRLEN];
 
