@@ -148,8 +148,17 @@ void sgwc_s5c_handle_create_session_response(
                     paa.session_type, session_cause);
             cause_value = OGS_GTP2_CAUSE_MANDATORY_IE_INCORRECT;
         } else {
-            ogs_ipv4_to_string_stack(paa.addr, sess->ue_ipv4);
-            ogs_ipv6addr_to_string_stack(paa.addr6, sess->ue_ipv6);
+            memset(sess->ue_ipv4, 0, OGS_ADDRSTRLEN);
+            memset(sess->ue_ipv6, 0, OGS_ADDRSTRLEN);
+
+            if (OGS_PDU_SESSION_TYPE_IPV4 == paa.session_type) {
+                ogs_ipv4_to_string_stack(paa.addr, sess->ue_ipv4);
+            } else if (OGS_PDU_SESSION_TYPE_IPV6 == paa.session_type) {
+                ogs_ipv6addr_to_string_stack(paa.addr6, sess->ue_ipv6);
+            } else if (OGS_PDU_SESSION_TYPE_IPV4V6 == paa.session_type) {
+                ogs_ipv4_to_string_stack(paa.addr, sess->ue_ipv4);
+                ogs_ipv6addr_to_string_stack(paa.addr6, sess->ue_ipv6);
+            }
         }
 
     } else {
