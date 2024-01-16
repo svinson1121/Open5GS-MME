@@ -240,12 +240,6 @@ void sgwc_s11_handle_create_session_request(
         memcpy(sgwc_ue->timezone_raw, req->ue_time_zone.data, sgwc_ue->timezone_raw_len);
     }
 
-    /* PGW IP address */
-    if (req->pgw_s5_s8_address_for_control_plane_or_pmip.presence) {
-        sgwc_ue->pgw_ip_raw_len = req->pgw_s5_s8_address_for_control_plane_or_pmip.len;
-        memcpy(sgwc_ue->pgw_ip_raw, req->pgw_s5_s8_address_for_control_plane_or_pmip.data, sgwc_ue->pgw_ip_raw_len);
-    }
-
     /* Add Session */
     ogs_assert(0 < ogs_fqdn_parse(apn,
             req->access_point_name.data,
@@ -337,6 +331,12 @@ void sgwc_s11_handle_create_session_request(
 
         /* Record Bearer QCI */
         bearer->qci = bearer_qos.qci;
+
+        /* Set PGW IP address */
+        if (req->pgw_s5_s8_address_for_control_plane_or_pmip.presence) {
+            sess->pgw_ip_raw_len = req->pgw_s5_s8_address_for_control_plane_or_pmip.len;
+            memcpy(sess->pgw_ip_raw, req->pgw_s5_s8_address_for_control_plane_or_pmip.data, sess->pgw_ip_raw_len);
+        }
 
         if (req->bearer_contexts_to_be_created[i].s1_u_enodeb_f_teid.presence) {
 

@@ -79,14 +79,6 @@ typedef struct sgwc_ue_s {
     uint8_t timezone_raw[OGS_MAX_TIMEZONE_RAW_LEN];
     int timezone_raw_len;
 
-    /* UE IP */
-    uint8_t ue_ip_raw[OGS_MAX_IP_RAW_LEN];
-    int ue_ip_raw_len;
-
-    /* PGW IP */
-    uint8_t pgw_ip_raw[OGS_MAX_IP_RAW_LEN];
-    int pgw_ip_raw_len;
-
     /* User-Location-Info */
     bool            uli_presence;
     ogs_eps_tai_t   e_tai;
@@ -120,6 +112,18 @@ typedef struct sgwc_sess_s {
     ogs_pfcp_node_t *pfcp_node;
 
     sgwc_ue_t       *sgwc_ue;
+
+    /* Timezone */
+    uint8_t timezone_raw[OGS_MAX_TIMEZONE_RAW_LEN];
+    int timezone_raw_len;
+
+    /* UE IP */
+    uint8_t ue_ip_raw[OGS_MAX_IP_RAW_LEN];
+    int ue_ip_raw_len;
+
+    /* PGW IP */
+    uint8_t pgw_ip_raw[OGS_MAX_IP_RAW_LEN];
+    int pgw_ip_raw_len;
 } sgwc_sess_t;
 
 typedef struct sgwc_bearer_s {
