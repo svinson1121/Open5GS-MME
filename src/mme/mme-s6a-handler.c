@@ -242,6 +242,8 @@ void mme_s6a_handle_clr(mme_ue_t *mme_ue, ogs_diam_s6a_message_t *s6a_message)
     clr_message = &s6a_message->clr_message;
     ogs_assert(clr_message);
 
+    ogs_debug("Handle CLR");
+
     mme_ue = mme_ue_cycle(mme_ue);
     if (!mme_ue) {
         ogs_warn("UE(mme-ue) context has already been removed");

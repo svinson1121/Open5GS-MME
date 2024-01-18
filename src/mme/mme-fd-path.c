@@ -2566,7 +2566,7 @@ static int push_pcscf_restoration_event(mme_ue_t *mme_ue)
 int mme_fd_init(void)
 {
     int ret;
-    struct disp_when data;
+    struct disp_when data = {};
 
     ret = ogs_diam_init(FD_MODE_CLIENT,
                 mme_self()->diam_conf_path, mme_self()->diam_config);
@@ -2586,9 +2586,9 @@ int mme_fd_init(void)
 
     /* Specific handler for Cancel-Location-Request */
     data.command = ogs_diam_s6a_cmd_clr;
-    ret = fd_disp_register(mme_ogs_diam_s6a_clr_cb, DISP_HOW_CC, &data, NULL,
+        ret = fd_disp_register(mme_ogs_diam_s6a_clr_cb, DISP_HOW_CC, &data, NULL,
                 &hdl_s6a_clr);
-    ogs_assert(ret == 0);
+        ogs_assert(ret == 0);
 
     /* Specific handler for Insert-Subscriber-Data-Request */
     data.command = ogs_diam_s6a_cmd_idr;
