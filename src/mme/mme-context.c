@@ -4070,9 +4070,12 @@ void mme_sess_remove(mme_sess_t *sess)
 {
     mme_ue_t *mme_ue = NULL;
 
-    ogs_assert(sess);
-    mme_ue = sess->mme_ue;
-    ogs_assert(mme_ue);
+    sess = mme_sess_cycle(sess);
+
+    if (NULL == sess) {
+        ogs_error("Trying to remove a sess that doesnt exist!");
+        return;
+    }
 
     if ((NULL == sess->session) ||
         (NULL == sess->session->name)) {
@@ -4081,7 +4084,12 @@ void mme_sess_remove(mme_sess_t *sess)
         mme_metrics_inst_global_dec(MME_METR_GLOB_GAUGE_EMERGENCY_BEARERS);
     }
 
-    ogs_list_remove(&mme_ue->sess_list, sess);
+    mme_ue = mme_ue_cycle(sess->mme_ue);
+    if (NULL != mme_ue) {
+        ogs_list_remove(&mme_ue->sess_list, sess);
+    } else {
+        ogs_error("Sess didn't have an associated mme_ue");
+    }
 
     mme_bearer_remove_all(sess);
 
@@ -4101,6 +4109,12 @@ void mme_sess_remove(mme_sess_t *sess)
 void mme_sess_remove_all(mme_ue_t *mme_ue)
 {
     mme_sess_t *sess = NULL, *next_sess = NULL;
+
+    mme_ue = mme_ue_cycle(mme_ue);
+    if (NULL == mme_ue) {
+        ogs_error("Trying to remove all sess from mme_ue that doesn't exist!");
+        return;
+    }
 
     sess = mme_sess_first(mme_ue);
     while (sess) {

@@ -466,8 +466,11 @@ void mme_state_operational(ogs_fsm_t *s, mme_event_t *e)
         break;
 
     case MME_EVENT_ESM_MESSAGE:
-        mme_ue = e->mme_ue;
-        ogs_assert(mme_ue);
+        mme_ue = mme_ue_cycle(e->mme_ue);
+        if (NULL == mme_ue) {
+            ogs_error("Got MME_EVENT_ESM_MESSAGE for a mme_ue that doesn't exist!");
+            break;
+        }
 
         pkbuf = e->pkbuf;
         ogs_assert(pkbuf);

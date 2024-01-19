@@ -503,7 +503,12 @@ void mme_gtp_send_delete_all_sessions(mme_ue_t *mme_ue, int action)
     mme_sess_t *sess = NULL, *next_sess = NULL;
     sgw_ue_t *sgw_ue = NULL;
 
-    ogs_assert(mme_ue);
+    mme_ue = mme_ue_cycle(mme_ue);
+    if (NULL == mme_ue) {
+        ogs_error("Trying to delete all sessions from mme_ue that doesn't exist!");
+        return;
+    }
+
     ogs_assert(action);
     
     sgw_ue = mme_ue->sgw_ue;
