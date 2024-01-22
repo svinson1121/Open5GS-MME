@@ -2586,9 +2586,9 @@ int mme_fd_init(void)
 
     /* Specific handler for Cancel-Location-Request */
     data.command = ogs_diam_s6a_cmd_clr;
-        ret = fd_disp_register(mme_ogs_diam_s6a_clr_cb, DISP_HOW_CC, &data, NULL,
-                &hdl_s6a_clr);
-        ogs_assert(ret == 0);
+    ret = fd_disp_register(mme_ogs_diam_s6a_clr_cb, DISP_HOW_CC, &data, NULL,
+            &hdl_s6a_clr);
+    ogs_assert(ret == 0);
 
     /* Specific handler for Insert-Subscriber-Data-Request */
     data.command = ogs_diam_s6a_cmd_idr;
