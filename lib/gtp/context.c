@@ -695,7 +695,8 @@ ogs_gtp_node_t *ogs_gtp_node_find_by_f_teid(
             break;
 
         /* Return node if both IPv4 and IPv6 but we only have one */
-        if ((node->ip.addr == ip.addr) || (node->ip.addr6 == ip.addr6) ) {
+        if ((node->ip.addr == ip.addr) || 
+            (0 == memcmp(node->ip.addr6, ip.addr6, sizeof(node->ip.addr6)))) {
             break;
         }
     }
