@@ -121,6 +121,7 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
     memset(&pgw_s5c_teid, 0, sizeof(ogs_gtp2_f_teid_t));
     pgw_s5c_teid.interface_type = OGS_GTP2_F_TEID_S5_S8_PGW_GTP_C;
     pgw_s5c_teid.teid = htobe32(sess->pgw_s5c_teid);
+
     if (session->smf_ip.ipv4 || session->smf_ip.ipv6) {
         pgw_s5c_teid.ipv4 = session->smf_ip.ipv4;
         pgw_s5c_teid.ipv6 = session->smf_ip.ipv6;
@@ -143,22 +144,33 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
         req->pgw_s5_s8_address_for_control_plane_or_pmip.presence = 1;
         req->pgw_s5_s8_address_for_control_plane_or_pmip.data =
             &pgw_s5c_teid;
-    } else {
+
+    } else if ((NULL != session->pgw_addr) || (NULL != session->pgw_addr6)) {
         ogs_sockaddr_t *pgw_addr = NULL;
         ogs_sockaddr_t *pgw_addr6 = NULL;
 
-        /* If UE already has a designated PGW use that */
-        pgw_addr = mme_ue->pgw_addr;
-        pgw_addr6 = mme_ue->pgw_addr6;
+        pgw_addr = session->pgw_addr;
+        pgw_addr6 = session->pgw_addr6;
 
-        if (!pgw_addr && !pgw_addr6) {
-            pgw_addr = mme_pgw_addr_find_by_apn(
-                    &mme_self()->pgw_list, AF_INET, session->name);
-            pgw_addr6 = mme_pgw_addr_find_by_apn(
-                    &mme_self()->pgw_list, AF_INET6, session->name);
+        rv = ogs_gtp2_sockaddr_to_f_teid(
+                pgw_addr, pgw_addr6, &pgw_s5c_teid, &len);
+        ogs_assert(rv == OGS_OK);
+        req->pgw_s5_s8_address_for_control_plane_or_pmip.presence = 1;
+        req->pgw_s5_s8_address_for_control_plane_or_pmip.data = &pgw_s5c_teid;
+        req->pgw_s5_s8_address_for_control_plane_or_pmip.len = len;
 
-            ogs_assert(pgw_addr || pgw_addr6);
-        }
+    } else {
+        ogs_sockaddr_t *pgw_addr = NULL;
+        ogs_sockaddr_t *pgw_addr6 = NULL;
+        
+        ogs_error("Expecting a PGW address to be set but one wasn't...");
+
+        session->pgw_addr = mme_pgw_addr_find_by_apn(
+                &mme_self()->pgw_list, AF_INET, session->name);
+        session->pgw_addr6 = mme_pgw_addr_find_by_apn(
+                &mme_self()->pgw_list, AF_INET6, session->name);
+
+        ogs_assert(session->pgw_addr || session->pgw_addr6);
 
         rv = ogs_gtp2_sockaddr_to_f_teid(
                 pgw_addr, pgw_addr6, &pgw_s5c_teid, &len);
@@ -168,74 +180,37 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
         req->pgw_s5_s8_address_for_control_plane_or_pmip.len = len;
     }
 
-    if (mme_self()->dns_target_pgw) {
-        enum { MAX_MCC_MNC_STR = 4 };
-        bool resolved_dns = false;
-        char ipv4[INET_ADDRSTRLEN] = "";
-        ResolverContext context = {};
-        char mme_mcc[MAX_MCC_MNC_STR] = "";
-        char mme_mnc[MAX_MCC_MNC_STR] = "";
-        char imsi_mcc[MAX_MCC_MNC_STR] = "000";
-        char imsi_mnc_2[MAX_MCC_MNC_STR] = "000";
-        char imsi_mnc_3[MAX_MCC_MNC_STR] = "000";
-        
-        /* Load MCC and MNC from config and format them */
-        snprintf(mme_mcc, MAX_MCC_MNC_STR, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
-        snprintf(mme_mnc, MAX_MCC_MNC_STR, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
-        strncpy(context.apn, sess->session->name, DNS_RESOLVERS_MAX_APN_STR);
-        strncpy(context.target, "pgw", DNS_RESOLVERS_MAX_TARGET_STR);
-        strncpy(context.protocol, "gtp", DNS_RESOLVERS_MAX_PROTOCOL_STR);
-        /* Load our domain suffix from the config */
-        strncpy(context.domain_suffix, mme_self()->dns_base_domain, DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR);
+    req->access_point_name.presence = 1;
 
-        memcpy(imsi_mcc, &mme_ue->imsi_bcd[0], 3);
-        memcpy(&imsi_mnc_2[1], &mme_ue->imsi_bcd[3], 2);
-        memcpy(imsi_mnc_3, &mme_ue->imsi_bcd[3], 3);
+    /* Update the apn to use the following format: <apn>.mncXXX.mccYYY.gprs */
+    if (imsi_is_roaming(&mme_ue->nas_mobile_identity_imsi)) {
+        /* Change the ANP */
+        char roaming_apn[OGS_MAX_APN_LEN+1] = "";
 
-        strncpy(context.mcc, imsi_mcc, DNS_RESOLVERS_MAX_MCC_STR);
+        uint16_t ue_mcc = 100 * mme_ue->nas_mobile_identity_imsi.digit1 +
+                          10 * mme_ue->nas_mobile_identity_imsi.digit2 +
+                          1 * mme_ue->nas_mobile_identity_imsi.digit3;
 
-        /* Are we resolving the home address in the config? */
-        if ((0 == strcmp(imsi_mcc, mme_mcc) &&
-            (0 == strncmp(imsi_mnc_3, mme_mnc, strlen(mme_mnc))))) {
-            /* Might be home, check home */
-            strncpy(context.interface, "s5", DNS_RESOLVERS_MAX_INTERFACE_STR);
-            strncpy(context.mnc, mme_mnc, DNS_RESOLVERS_MAX_MNC_STR);
-            
-            ogs_debug("Attempting NAPTR resolv for home [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
-            resolved_dns = resolve_naptr(&context, ipv4, INET_ADDRSTRLEN);
-        }
-        else {
-            /* This is roaming, check roaming with a 3 digit MNC */
-            strncpy(context.interface, "s8", DNS_RESOLVERS_MAX_INTERFACE_STR);
-            strcpy(context.mnc, imsi_mnc_3);
+        uint16_t ue_mnc = 100 * mme_ue->nas_mobile_identity_imsi.digit4 +
+                          10 * mme_ue->nas_mobile_identity_imsi.digit5 +
+                          1 * mme_ue->nas_mobile_identity_imsi.digit6;
 
-            ogs_debug("Attempting NAPTR resolv for roming [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
-            if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
-                /* We resolved for roming */
-                resolved_dns = true;
-            } else {
-                /* We failed to resolve with assumption of a 3 digit MNC,
-                * try the 2 digit MNC */
-                strcpy(context.mnc, imsi_mnc_2);
+        snprintf(
+            roaming_apn,
+            OGS_MAX_APN_LEN,
+            "%s.mnc%03u.mcc%03u.gprs",
+            session->name,
+            ue_mnc,
+            ue_mcc
+        );
 
-                ogs_debug("Attempting NAPTR resolv for roming [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
-                resolved_dns = resolve_naptr(&context, ipv4, INET_ADDRSTRLEN);
-            }
-        }
-
-        if (resolved_dns) {
-            ogs_info("Successfully clobbered the PGW IP in CSR with '%s'", ipv4);
-            uint32_t addr = 0;
-            ogs_ipv4_from_string(&addr, ipv4);
-            pgw_s5c_teid.addr = addr;
-        } else {
-            ogs_info("Failed to resolve dns and update PGW IP in CSR");
-        }
+        req->access_point_name.len = ogs_fqdn_build(
+                apn, roaming_apn, strlen(roaming_apn));
+    } else {
+        req->access_point_name.len = ogs_fqdn_build(
+                apn, session->name, strlen(session->name));
     }
 
-    req->access_point_name.presence = 1;
-    req->access_point_name.len = ogs_fqdn_build(
-            apn, session->name, strlen(session->name));
     req->access_point_name.data = apn;
 
     req->selection_mode.presence = 1;

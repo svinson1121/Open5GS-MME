@@ -40,8 +40,8 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 fptr,
                 "%li,"   /* epoch */
                 "%s,"    /* imsi */
-                "%s,"    /* event */
-                "%s,"    /* charging_id */
+                "%s%s,"  /* dedicated_bearer / event */
+                "%u,"    /* charging_id */
                 "%s,"    /* msisdn */
                 "%s,"    /* ue_imei */
                 "%s,"    /* timezone_raw */
@@ -49,7 +49,7 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 "%u,"    /* tac */
                 "%u,"    /* eci */
                 "%s,"    /* sgw_ip */
-                "%s,"    /* ue_ip */
+                "%s|%s," /* ue_ipv4|ue_ipv6 */
                 "%s,"    /* pgw_ip */
                 "%s,"    /* apn */
                 "%u,"    /* qci */
@@ -57,6 +57,7 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 "%lu\n", /* octets_out */
                 current_epoch_sec,
                 data.imsi,
+                data.dedicated_bearer ? "dedicated_bearer_" : "default_bearer_",
                 data.event,
                 data.charging_id,
                 data.msisdn_bcd,
@@ -66,7 +67,8 @@ bool log_usage_data(UsageLoggerState *state, time_t current_epoch_sec, UsageLogg
                 data.tac,
                 data.eci,
                 data.sgw_ip,
-                data.ue_ip,
+                data.ue_ipv4,
+                data.ue_ipv6,
                 data.pgw_ip,
                 data.apn,
                 data.qci,
@@ -134,7 +136,7 @@ static bool create_new_file(UsageLoggerState const *state)
     {
         int fprint_result = fprintf(
             fptr,
-            "# SWG CDR File:\n"
+            "# SGW CDR File:\n"
             "# File Start Time: %s (%li)\n"
             "# File End Time: %s (%li)\n"
             "# SGW Name: %s\n"

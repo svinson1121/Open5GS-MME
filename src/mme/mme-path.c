@@ -149,18 +149,18 @@ void mme_send_delete_session_or_mme_ue_context_release(mme_ue_t *mme_ue)
     }
 }
 
-void mme_send_release_access_bearer_or_ue_context_release(enb_ue_t *enb_ue)
+void mme_send_release_access_bearer_or_ue_context_release(enb_ue_t *enb_ue, int action)
 {
     int r;
     mme_ue_t *mme_ue = NULL;
     ogs_assert(enb_ue);
 
     mme_ue = enb_ue->mme_ue;
-    if (mme_ue) {
+    if (mme_ue && mme_ue->sgw_ue) {
         ogs_debug("[%s] Release access bearer request", mme_ue->imsi_bcd);
         ogs_assert(OGS_OK ==
             mme_gtp_send_release_access_bearers_request(
-                mme_ue, OGS_GTP_RELEASE_SEND_UE_CONTEXT_RELEASE_COMMAND));
+                mme_ue, action));
     } else {
         ogs_debug("No UE Context");
         r = s1ap_send_ue_context_release_command(enb_ue,

@@ -661,6 +661,22 @@ ogs_gtp_node_t *ogs_gtp_node_find_by_addr(
     return node;
 }
 
+ogs_gtp_node_t *ogs_gtp_node_find_by_addr_only(
+        ogs_list_t *list, ogs_sockaddr_t *addr)
+{
+    ogs_gtp_node_t *node = NULL;
+
+    ogs_assert(list);
+    ogs_assert(addr);
+
+    ogs_list_for_each(list, node) {
+        if (ogs_sockaddr_is_equal_addr_only(&node->addr, addr) == true)
+            break;
+    }
+
+    return node;
+}
+
 ogs_gtp_node_t *ogs_gtp_node_find_by_f_teid(
         ogs_list_t *list, ogs_gtp2_f_teid_t *f_teid)
 {
@@ -677,6 +693,12 @@ ogs_gtp_node_t *ogs_gtp_node_find_by_f_teid(
     ogs_list_for_each(list, node) {
         if (memcmp(&node->ip, &ip, sizeof(ip)) == 0)
             break;
+
+        /* Return node if both IPv4 and IPv6 but we only have one */
+        if ((node->ip.addr == ip.addr) || 
+            (0 == memcmp(node->ip.addr6, ip.addr6, sizeof(node->ip.addr6)))) {
+            break;
+        }
     }
 
     return node;

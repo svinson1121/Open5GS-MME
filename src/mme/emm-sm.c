@@ -243,8 +243,11 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
 
     mme_sm_debug(e);
 
-    mme_ue = e->mme_ue;
-    ogs_assert(mme_ue);
+    mme_ue = mme_ue_cycle(e->mme_ue);
+    if (NULL == mme_ue) {
+        ogs_error("Received event with id %i however mme_ue is NULL... ignoring...", e->id);
+        return;
+    }
 
     switch (e->id) {
     case MME_EVENT_EMM_MESSAGE:
@@ -252,7 +255,10 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
         ogs_assert(message);
 
         enb_ue = enb_ue_cycle(mme_ue->enb_ue);
-        ogs_assert(enb_ue);
+        if (NULL == enb_ue) {
+            ogs_error("Received MME_EVENT_EMM_MESSAGE however enb_ue is NULL... ignoring...");
+            break;
+        }
 
         h.type = e->nas_type;
 
@@ -575,7 +581,7 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
             }
 
             if (!mme_ue->nas_eps.update.active_flag)
-                mme_send_release_access_bearer_or_ue_context_release(enb_ue);
+                mme_send_release_access_bearer_or_ue_context_release(enb_ue, OGS_GTP_RELEASE_SEND_UE_CONTEXT_RELEASE_COMMAND);
 
             if (mme_ue->next.m_tmsi) {
                 ogs_fatal("MME does not create new GUTI");
@@ -637,7 +643,7 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
                     ogs_expect(r == OGS_OK);
                     ogs_assert(r != OGS_ERROR);
                     mme_send_release_access_bearer_or_ue_context_release(
-                            enb_ue);
+                            enb_ue, OGS_GTP_RELEASE_SEND_UE_CONTEXT_RELEASE_COMMAND);
                     break;
                 }
 

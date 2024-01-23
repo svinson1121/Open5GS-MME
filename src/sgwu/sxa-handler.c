@@ -177,6 +177,7 @@ void sgwu_sxa_handle_session_modification_request(
     ogs_pfcp_far_t *far = NULL;
     ogs_pfcp_pdr_t *created_pdr[OGS_MAX_NUM_OF_PDR];
     int num_of_created_pdr = 0;
+    ogs_pfcp_user_plane_report_t report = {};
     uint8_t cause_value = 0;
     uint8_t offending_ie_value = 0;
     int i;
@@ -194,6 +195,33 @@ void sgwu_sxa_handle_session_modification_request(
                 OGS_PFCP_SESSION_MODIFICATION_RESPONSE_TYPE,
                 OGS_PFCP_CAUSE_SESSION_CONTEXT_NOT_FOUND, 0);
         return;
+    }
+
+    /* Copy all the latest info on the usage of the URRs before removing them */
+    report.type.usage_report = 1;
+    for (i = 0; i < OGS_MAX_NUM_OF_URR; i++) {
+        if (req->remove_urr[i].presence) {
+            if (req->remove_urr[i].urr_id.presence) {
+                ogs_pfcp_urr_t *urr = ogs_pfcp_urr_find(&sess->pfcp, req->remove_urr->urr_id.u32);
+
+                if (NULL != urr) {
+                    sgwu_sess_urr_acc_fill_usage_report(sess, urr, &report, report.num_of_usage_report);
+                    report.usage_report[report.num_of_usage_report].rep_trigger.termination_report = 1;
+                    report.num_of_usage_report++;
+                    sgwu_sess_urr_acc_snapshot(sess, urr);
+                } else {
+                    ogs_error("Could not remove URR with id %d as it could not be found", req->remove_urr->urr_id.u32);
+                }
+
+            } else {
+                ogs_error("Cannot remove a URR if no id was provided");
+            }
+        }
+
+        if (report.num_of_usage_report == 8) {
+            ogs_error("Cant make enough final usage reports for all these URRs");
+            break;
+        }
     }
 
     for (i = 0; i < OGS_MAX_NUM_OF_PDR; i++) {
@@ -229,6 +257,12 @@ void sgwu_sxa_handle_session_modification_request(
     }
     if (cause_value != OGS_PFCP_CAUSE_REQUEST_ACCEPTED)
         goto cleanup;
+
+    sgwu_sxa_handle_create_urr(sess, &req->create_urr[0], &cause_value, &offending_ie_value);
+    if (cause_value != OGS_PFCP_CAUSE_REQUEST_ACCEPTED) {
+        ogs_error("Failed to handle create URR!");
+        goto cleanup;
+    }
 
     /* Send End Marker to gNB */
     ogs_list_for_each(&sess->pfcp.pdr_list, pdr) {
@@ -318,11 +352,11 @@ void sgwu_sxa_handle_session_modification_request(
     if (ogs_pfcp_self()->up_function_features.ftup == 0)
         ogs_assert(OGS_OK ==
             sgwu_pfcp_send_session_modification_response(
-                xact, sess, NULL, 0));
+                xact, sess, NULL, 0, NULL));
     else
         ogs_assert(OGS_OK ==
             sgwu_pfcp_send_session_modification_response(
-                xact, sess, created_pdr, num_of_created_pdr));
+                xact, sess, created_pdr, num_of_created_pdr, &report));
     return;
 
 cleanup:

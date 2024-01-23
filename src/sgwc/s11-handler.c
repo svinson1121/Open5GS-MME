@@ -240,12 +240,6 @@ void sgwc_s11_handle_create_session_request(
         memcpy(sgwc_ue->timezone_raw, req->ue_time_zone.data, sgwc_ue->timezone_raw_len);
     }
 
-    /* PGW IP address */
-    if (req->pgw_s5_s8_address_for_control_plane_or_pmip.presence) {
-        sgwc_ue->pgw_ip_raw_len = req->pgw_s5_s8_address_for_control_plane_or_pmip.len;
-        memcpy(sgwc_ue->pgw_ip_raw, req->pgw_s5_s8_address_for_control_plane_or_pmip.data, sgwc_ue->pgw_ip_raw_len);
-    }
-
     /* Add Session */
     ogs_assert(0 < ogs_fqdn_parse(apn,
             req->access_point_name.data,
@@ -330,9 +324,19 @@ void sgwc_s11_handle_create_session_request(
 
         bearer = sgwc_bearer_add(sess);
         ogs_assert(bearer);
+        bearer->dedicated = 0;
 
         /* Set Bearer EBI */
         bearer->ebi = req->bearer_contexts_to_be_created[i].eps_bearer_id.u8;
+
+        /* Record Bearer QCI */
+        bearer->qci = bearer_qos.qci;
+
+        /* Set PGW IP address */
+        if (req->pgw_s5_s8_address_for_control_plane_or_pmip.presence) {
+            sess->pgw_ip_raw_len = req->pgw_s5_s8_address_for_control_plane_or_pmip.len;
+            memcpy(sess->pgw_ip_raw, req->pgw_s5_s8_address_for_control_plane_or_pmip.data, sess->pgw_ip_raw_len);
+        }
 
         if (req->bearer_contexts_to_be_created[i].s1_u_enodeb_f_teid.presence) {
 
@@ -843,6 +847,12 @@ void sgwc_s11_handle_create_bearer_response(
     /* Set EBI */
     bearer->ebi = rsp->bearer_contexts.eps_bearer_id.u8;
 
+    /* Set UE Timezone */
+    if (rsp->ue_time_zone.presence) {
+        sgwc_ue->timezone_raw_len = rsp->ue_time_zone.len;
+        memcpy(sgwc_ue->timezone_raw, rsp->ue_time_zone.data, sgwc_ue->timezone_raw_len);
+    }
+
     /* Data Plane(DL) : eNB-S1U */
     enb_s1u_teid = rsp->bearer_contexts.s1_u_enodeb_f_teid.data;
     dl_tunnel->remote_teid = be32toh(enb_s1u_teid->teid);
@@ -1037,7 +1047,7 @@ void sgwc_s11_handle_delete_bearer_response(
     ogs_assert(s11_xact);
     s5c_xact = s11_xact->assoc_xact;
 
-    if ((s11_xact->xid & OGS_GTP_CMD_XACT_ID) && (NULL != s5c_xact))
+    if ((s11_xact->xid & OGS_GTP_CMD_XACT_ID))
         /* MME received Bearer Resource Modification Request */
         bearer = s5c_xact->data;
     else
@@ -1084,14 +1094,8 @@ void sgwc_s11_handle_delete_bearer_response(
             ogs_error("No Cause");
         }
 
-        /* Release entire session: */
         ogs_assert(OGS_OK ==
-            sgwc_pfcp_send_session_deletion_request(sess, NULL, NULL));
-    } else if ((1 == rsp->cause.presence) &&
-               (OGS_GTP2_CAUSE_CONTEXT_NOT_FOUND == cause_value)) {
-        /* Release entire session: */
-        ogs_assert(OGS_OK ==
-            sgwc_pfcp_send_session_deletion_request(sess, NULL, NULL));
+            sgwc_pfcp_send_session_deletion_request(sess, s5c_xact, gtpbuf));
     } else {
        /*
         * << EPS Bearer IDs >>

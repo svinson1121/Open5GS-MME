@@ -68,7 +68,6 @@ static void stats_remove_mme_session(void);
 
 static bool compare_ue_info(mme_sgw_t *node, enb_ue_t *enb_ue);
 static mme_sgw_t *selected_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue);
-static mme_sgw_t *select_random_sgw(void);
 static mme_sgw_t *changed_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue);
 
 static int rand_under(int val);
@@ -1786,6 +1785,9 @@ int mme_context_parse_config(void)
                         ogs_info("Emergency bearer services have been disabled");
                         *emergency_bearer_services = false;
                     }
+                } else if (!strcmp(mme_key, "default_emergency_session_type")) {
+                    const char *c_default_emergency_session_type = ogs_yaml_iter_value(&mme_iter);
+                    self.default_emergency_session_type = atoi(c_default_emergency_session_type);
                 } else if (!strcmp(mme_key, "redis_server")) {
                     ogs_yaml_iter_t redis_iter;
                     ogs_yaml_iter_recurse(&mme_iter, &redis_iter);
@@ -1873,6 +1875,8 @@ int mme_context_parse_config(void)
                         ogs_info("Local time IE will not be included in NAS-PDU messages");
                         self.include_local_time_zone = false;
                     }
+                } else if (!strcmp(mme_key, "network_access_mode_default")) {
+                    self.network_access_mode_default = atoi(ogs_yaml_iter_value(&mme_iter));
                 } else
                     ogs_warn("unknown key `%s`", mme_key);
             }
@@ -1880,7 +1884,7 @@ int mme_context_parse_config(void)
             ogs_yaml_iter_t sgwc_roaming_iter;
             mme_sgw_t *sgw = NULL;
             ogs_sockaddr_t *addr = NULL;
-            int family = AF_UNSPEC;
+            int family = AF_INET;
             int i, num = 0;
             const char *hostname[OGS_MAX_NUM_OF_HOSTNAME];
             uint16_t port = ogs_gtp_self()->gtpc_port;
@@ -2345,6 +2349,9 @@ void mme_sgw_remove(mme_sgw_t *sgw)
     ogs_gtp_xact_delete_all(&sgw->gnode);
     ogs_freeaddrinfo(sgw->gnode.sa_list);
 
+    /* Clear sgw so if pointer is used again use-after-free is easier to detect */
+    memset(sgw, 0, sizeof(*sgw));
+
     ogs_pool_free(&mme_sgw_pool, sgw);
 }
 
@@ -2401,6 +2408,9 @@ void mme_sgw_roaming_remove(mme_sgw_t *sgw)
     ogs_gtp_xact_delete_all(&sgw->gnode);
     ogs_freeaddrinfo(sgw->gnode.sa_list);
 
+    /* Clear sgw so if pointer is used again use-after-free is easier to detect */
+    memset(sgw, 0, sizeof(*sgw));
+
     ogs_pool_free(&mme_sgw_pool, sgw);
 }
 
@@ -2424,6 +2434,27 @@ mme_sgw_t *mme_sgw_roaming_find_by_addr(ogs_sockaddr_t *addr)
     }
 
     return sgw;
+}
+
+mme_sgw_t *select_random_sgw()
+{
+    char buf[OGS_ADDRSTRLEN];
+    mme_sgw_t *random;
+    int sgw_count;
+    int index;
+
+    /* Select a random sgw */
+    sgw_count = ogs_list_count(&mme_self()->sgw_list);
+    index = rand_under(sgw_count);
+    ogs_debug("There are %i SGWs in our list, we have randomly picked the one at index %i", sgw_count, index);
+    random = ogs_list_at(&mme_self()->sgw_list, index);
+
+    ogs_info(
+        "SGWC address chosen was '%s'",
+        OGS_ADDR(random->gnode.sa_list, buf)
+    );
+
+    return random;
 }
 
 mme_sgw_t *select_random_sgw_roaming()
@@ -2477,6 +2508,10 @@ void mme_pgw_remove(mme_pgw_t *pgw)
     ogs_list_remove(&self.pgw_list, pgw);
 
     ogs_freeaddrinfo(pgw->sa_list);
+
+    /* Clear pgw so if pointer is used again use-after-free is easier to detect */
+    memset(pgw, 0, sizeof(*pgw));
+
     ogs_pool_free(&mme_pgw_pool, pgw);
 }
 
@@ -2593,6 +2628,9 @@ void mme_vlr_remove(mme_vlr_t *vlr)
     if (vlr->option)
         ogs_free(vlr->option);
 
+    /* Clear vlr so if pointer is used again use-after-free is easier to detect */
+    memset(vlr, 0, sizeof(*vlr));
+
     ogs_pool_free(&mme_vlr_pool, vlr);
 }
 
@@ -2649,6 +2687,9 @@ void mme_csmap_remove(mme_csmap_t *csmap)
     ogs_assert(csmap);
 
     ogs_list_remove(&self.csmap_list, csmap);
+
+    /* Clear csmap so if pointer is used again use-after-free is easier to detect */
+    memset(csmap, 0, sizeof(*csmap));
 
     ogs_pool_free(&mme_csmap_pool, csmap);
 }
@@ -2929,6 +2970,9 @@ void enb_ue_remove(enb_ue_t *enb_ue)
     ogs_assert(enb_ue->t_s1_holding);
     ogs_timer_delete(enb_ue->t_s1_holding);
 
+    /* Clear enb_ue so if pointer is used again use-after-free is easier to detect */
+    memset(enb_ue, 0, sizeof(*enb_ue));
+
     ogs_pool_free(&enb_ue_pool, enb_ue);
 
     stats_remove_enb_ue();
@@ -3008,7 +3052,12 @@ void sgw_ue_remove(sgw_ue_t *sgw_ue)
 {
     mme_sgw_t *sgw = NULL;
 
-    ogs_assert(sgw_ue);
+    if (NULL == sgw_ue) {
+        /* If the sgw_ue was never set we don't need to do anything */
+        ogs_fatal("Trying to remove sgw_ue that doesn't exist!");
+        return;
+    }
+
     sgw = sgw_ue->sgw;
     ogs_assert(sgw);
 
@@ -3016,6 +3065,9 @@ void sgw_ue_remove(sgw_ue_t *sgw_ue)
 
     ogs_assert(sgw_ue->t_s11_holding);
     ogs_timer_delete(sgw_ue->t_s11_holding);
+
+    /* Clear sgw_ue so if pointer is used again use-after-free is easier to detect */
+    memset(sgw_ue, 0, sizeof(*sgw_ue));
 
     ogs_pool_free(&sgw_ue_pool, sgw_ue);
 }
@@ -3186,27 +3238,6 @@ static mme_sgw_t *selected_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue)
     return random;
 }
 
-static mme_sgw_t *select_random_sgw()
-{
-    char buf[OGS_ADDRSTRLEN];
-    mme_sgw_t *random;
-    int sgw_count;
-    int index;
-
-    /* Select a random sgw */
-    sgw_count = ogs_list_count(&mme_self()->sgw_list);
-    index = rand_under(sgw_count);
-    ogs_debug("There are %i SGWs in our list, we have randomly picked the one at index %i", sgw_count, index);
-    random = ogs_list_at(&mme_self()->sgw_list, index);
-
-    ogs_info(
-        "SGWC address chosen was '%s'",
-        OGS_ADDR(random->gnode.sa_list, buf)
-    );
-
-    return random;
-}
-
 static mme_sgw_t *changed_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue)
 {
     mme_sgw_t *changed = NULL;
@@ -3221,17 +3252,19 @@ static mme_sgw_t *changed_sgw_node(mme_sgw_t *current, enb_ue_t *enb_ue)
     return NULL;
 }
 
-mme_ue_t *mme_ue_add(enb_ue_t *enb_ue)
+mme_ue_t *mme_ue_add(enb_ue_t *enb_ue, ogs_nas_eps_message_t *nas_message)
 {
     mme_enb_t *enb = NULL;
     mme_ue_t *mme_ue = NULL;
-    sgw_ue_t *sgw_ue = NULL;
-
-    char buf[OGS_ADDRSTRLEN];
+    ogs_nas_mobile_identity_imsi_t *nas_mobile_identity_imsi = NULL; 
 
     ogs_assert(enb_ue);
+    ogs_assert(nas_message);
     enb = enb_ue->enb;
+    nas_mobile_identity_imsi =
+        &nas_message->emm.attach_request.eps_mobile_identity.imsi;
     ogs_assert(enb);
+    ogs_assert(nas_mobile_identity_imsi);
 
     ogs_pool_alloc(&mme_ue_pool, &mme_ue);
     if (mme_ue == NULL) {
@@ -3312,24 +3345,8 @@ mme_ue_t *mme_ue_add(enb_ue_t *enb_ue)
     ogs_hash_set(self.mme_s11_teid_hash,
             &mme_ue->mme_s11_teid, sizeof(mme_ue->mme_s11_teid), mme_ue);
 
-    /* Select an SGW to use for this UE */
-    mme_self()->sgw = select_random_sgw();
-    ogs_assert(mme_self()->sgw);
-
-    sgw_ue = sgw_ue_add(mme_self()->sgw);
-    ogs_assert(sgw_ue);
-    ogs_assert(sgw_ue->gnode);
-
-    sgw_ue_associate_mme_ue(sgw_ue, mme_ue);
-
-    /* Select the PGW that the SGW will use for this UE */
-    mme_ue->pgw_addr = mme_pgw_addr_select_random(
-                &mme_self()->pgw_list, AF_INET);
-    mme_ue->pgw_addr6 = mme_pgw_addr_select_random(
-        &mme_self()->pgw_list, AF_INET6);
-
-    ogs_info("UE using SGW on IP[%s]", OGS_ADDR(sgw_ue->gnode->sa_list, buf));
-    ogs_info("UE using PGW on IP[%s]", OGS_ADDR(mme_ue->pgw_addr, buf));
+    /* SGW selection takes place in mme_s11_build_create_session_request */
+    /* PGW selection takes place in mme_s11_build_create_session_request */
 
     /* Clear VLR */
     mme_ue->csmap = NULL;
@@ -3347,7 +3364,12 @@ mme_ue_t *mme_ue_add(enb_ue_t *enb_ue)
 
 void mme_ue_remove(mme_ue_t *mme_ue)
 {
-    ogs_assert(mme_ue);
+    mme_ue = mme_ue_cycle(mme_ue);
+
+    if (NULL == mme_ue) {
+        ogs_fatal("Trying to remove mme_ue that doesn't exist!");
+        return;
+    }
 
     ogs_list_remove(&self.mme_ue_list, mme_ue);
 
@@ -3356,7 +3378,6 @@ void mme_ue_remove(mme_ue_t *mme_ue)
     ogs_hash_set(self.mme_s11_teid_hash,
             &mme_ue->mme_s11_teid, sizeof(mme_ue->mme_s11_teid), NULL);
 
-    ogs_assert(mme_ue->sgw_ue);
     sgw_ue_remove(mme_ue->sgw_ue);
 
     if (0 != mme_ue->imsi_len) {
@@ -3403,6 +3424,10 @@ void mme_ue_remove(mme_ue_t *mme_ue)
     mme_ebi_pool_final(mme_ue);
 
     ogs_pool_free(&mme_s11_teid_pool, mme_ue->mme_s11_teid_node);
+
+    /* Clear mme_ue so if pointer is used again use-after-free is easier to detect */
+    memset(mme_ue, 0, sizeof(*mme_ue));
+
     ogs_pool_free(&mme_ue_pool, mme_ue);
 
     ogs_info("[Removed] Number of MME-UEs is now %d",
@@ -3707,10 +3732,30 @@ int mme_ue_set_imsi(mme_ue_t *mme_ue, char *imsi_bcd)
             /* Phase-3 : Clear Session Context in OLD MME-UE Context */
             memset(&old_mme_ue->sess_list, 0, sizeof(old_mme_ue->sess_list));
 
-            /* Phase-4 : Move sgw_ue->sgw_s11_teid */
-            ogs_assert(old_mme_ue->sgw_ue);
-            ogs_assert(mme_ue->sgw_ue);
-            mme_ue->sgw_ue->sgw_s11_teid = old_mme_ue->sgw_ue->sgw_s11_teid;
+            /* Phase-4 : Move sgw_ue->sgw_s11_teid if possible */
+            if (NULL == old_mme_ue->sgw_ue) {
+                /* If the old_mme_ue doesn't have a sgw_ue it 
+                 * must not have received a Create Session Response.
+                 * In this case we dont need to do anything as the new
+                 * mme_ue will get a fresh sgw_ue when the Create Session
+                 * Request is sent */
+                ogs_debug("old_mme_ue->sgw_ue does not exist");
+            } else if (NULL == mme_ue->sgw_ue) {
+                /* If the new mme_ue doesn't have a sgw_ue a
+                 * Create Session Request hasn't been sent yet.
+                 * At this point we know that the old sgw_ue exists
+                 * so lets take that one. After copying the sgw_ue
+                 * we unlink the old_mme_ue's sgw_ue so that the
+                 * call to mme_ue_remove doesn't free up that sgw_ue 
+                 * memory. */
+                ogs_debug("old_mme_ue->sgw_ue exists but mme_ue->sgw_ue does not");
+                sgw_ue_associate_mme_ue(old_mme_ue->sgw_ue, mme_ue);
+                sgw_ue_unlink(old_mme_ue);
+            } else {
+                /* If a new connection exists (mme_ue->sgw_ue != NULL)
+                 * then we need to remove the old connection */
+                ogs_error("New and old sgw connections (sgw_ue) found for imsi '%s', removing the old and keeping the new", imsi_bcd);
+            }
 
             mme_ue_remove(old_mme_ue);
         }
@@ -3833,21 +3878,40 @@ int mme_ue_xact_count(mme_ue_t *mme_ue, uint8_t org)
                 ogs_list_count(&gnode->remote_list);
 }
 
-bool plmn_id_is_roaming(ogs_plmn_id_t *plmn_id)
+bool imsi_is_roaming(ogs_nas_mobile_identity_imsi_t *nas_imsi)
 {
-    ogs_assert(plmn_id);
-    uint16_t ue_mnc = ogs_plmn_id_mnc(plmn_id);
-    uint16_t ue_mcc = ogs_plmn_id_mcc(plmn_id);
+    ogs_assert(nas_imsi);
+    
+    if (OGS_NAS_EPS_MOBILE_IDENTITY_IMSI != nas_imsi->type) {
+        /* In this case we need to wait for emm_handle_identity_response to get the imsi */
+        ogs_warn("eps_mobile_identity type was not OGS_NAS_EPS_MOBILE_IDENTITY_IMSI, assuming not roaming for now");
+        return false;
+    }
+    
+    uint16_t ue_mcc = 100 * nas_imsi->digit1 +
+                      10 * nas_imsi->digit2 +
+                      1 * nas_imsi->digit3;
+
+    uint16_t ue_mnc_3_digit = 100 * nas_imsi->digit4 +
+                              10 * nas_imsi->digit5 +
+                              1 * nas_imsi->digit6;
+
+    uint16_t ue_mnc_2_digit = 10 * nas_imsi->digit4 +
+                              1 * nas_imsi->digit5;
+
 
     for (int i = 0; i < mme_self()->home_mnc_mcc_sz; ++i) {
-        uint16_t home_mnc = mme_self()->home_mnc_mcc[i].mnc;
         uint16_t home_mcc = mme_self()->home_mnc_mcc[i].mcc;
+        uint16_t home_mnc = mme_self()->home_mnc_mcc[i].mnc;
 
-        if ((ue_mnc == home_mnc) &&
-            (ue_mcc == home_mcc))
+        if (ue_mcc == home_mcc)
         {
-            /* Is not roaming */
-            return false;
+            if ((ue_mnc_2_digit == home_mnc) ||
+                (ue_mnc_3_digit == home_mnc)) 
+            {
+                /* Is not roaming */
+    		    return false;
+            }
         }
     }
 
@@ -4006,9 +4070,12 @@ void mme_sess_remove(mme_sess_t *sess)
 {
     mme_ue_t *mme_ue = NULL;
 
-    ogs_assert(sess);
-    mme_ue = sess->mme_ue;
-    ogs_assert(mme_ue);
+    sess = mme_sess_cycle(sess);
+
+    if (NULL == sess) {
+        ogs_error("Trying to remove a sess that doesnt exist!");
+        return;
+    }
 
     if ((NULL == sess->session) ||
         (NULL == sess->session->name)) {
@@ -4017,7 +4084,12 @@ void mme_sess_remove(mme_sess_t *sess)
         mme_metrics_inst_global_dec(MME_METR_GLOB_GAUGE_EMERGENCY_BEARERS);
     }
 
-    ogs_list_remove(&mme_ue->sess_list, sess);
+    mme_ue = mme_ue_cycle(sess->mme_ue);
+    if (NULL != mme_ue) {
+        ogs_list_remove(&mme_ue->sess_list, sess);
+    } else {
+        ogs_error("Sess didn't have an associated mme_ue");
+    }
 
     mme_bearer_remove_all(sess);
 
@@ -4025,6 +4097,9 @@ void mme_sess_remove(mme_sess_t *sess)
     OGS_NAS_CLEAR_DATA(&sess->ue_epco);
     OGS_TLV_CLEAR_DATA(&sess->pgw_pco);
     OGS_TLV_CLEAR_DATA(&sess->pgw_epco);
+
+    /* Clear sess so if pointer is used again use-after-free is easier to detect */
+    memset(sess, 0, sizeof(*sess));
 
     ogs_pool_free(&mme_sess_pool, sess);
 
@@ -4034,6 +4109,12 @@ void mme_sess_remove(mme_sess_t *sess)
 void mme_sess_remove_all(mme_ue_t *mme_ue)
 {
     mme_sess_t *sess = NULL, *next_sess = NULL;
+
+    mme_ue = mme_ue_cycle(mme_ue);
+    if (NULL == mme_ue) {
+        ogs_error("Trying to remove all sess from mme_ue that doesn't exist!");
+        return;
+    }
 
     sess = mme_sess_first(mme_ue);
     while (sess) {
@@ -4109,6 +4190,11 @@ unsigned int mme_sess_count(mme_ue_t *mme_ue)
     return count;
 }
 
+mme_sess_t *mme_sess_cycle(mme_sess_t *sess)
+{
+    return ogs_pool_cycle(&mme_sess_pool, sess);
+}
+
 mme_bearer_t *mme_bearer_add(mme_sess_t *sess)
 {
     mme_event_t e;
@@ -4169,6 +4255,9 @@ void mme_bearer_remove(mme_bearer_t *bearer)
 
     if (bearer->ebi_node)
         ogs_pool_free(&bearer->mme_ue->ebi_pool, bearer->ebi_node);
+
+    /* Clear bearer so if pointer is used again use-after-free is easier to detect */
+    memset(bearer, 0, sizeof(*bearer));
 
     ogs_pool_free(&mme_bearer_pool, bearer);
 }
@@ -4441,12 +4530,14 @@ void mme_session_remove_all(mme_ue_t *mme_ue)
 {
     int i;
 
+    mme_ue = mme_ue_cycle(mme_ue);
     ogs_assert(mme_ue);
 
     ogs_assert(mme_ue->num_of_session <= OGS_MAX_NUM_OF_SESS);
     for (i = 0; i < mme_ue->num_of_session; i++) {
-        if (mme_ue->session[i].name)
+        if (mme_ue->session[i].name) {
             ogs_free(mme_ue->session[i].name);
+        }
     }
 
     mme_ue->num_of_session = 0;

@@ -28,8 +28,6 @@
 #undef OGS_LOG_DOMAIN
 #define OGS_LOG_DOMAIN __esm_log_domain
 
-static bool has_valid_bearers(mme_sess_t *sess);
-
 int esm_handle_pdn_connectivity_request(mme_bearer_t *bearer, 
         ogs_nas_eps_pdn_connectivity_request_t *req, int create_action)
 {
@@ -134,8 +132,7 @@ int esm_handle_pdn_connectivity_request(mme_bearer_t *bearer,
     if (OGS_NAS_EPS_REQUEST_TYPE_EMERGENCY == sess->request_type.value) {
         /* Emergency APN */
         sess->session = mme_emergency_session(mme_ue);
-    }
-    else if (!sess->session) {
+    } else if (!sess->session) {
         /* Default APN */
         sess->session = mme_default_session(mme_ue);
     }
@@ -161,8 +158,13 @@ int esm_handle_pdn_connectivity_request(mme_bearer_t *bearer,
             }
         }
 
-        ogs_assert(OGS_OK ==
-            mme_gtp_send_create_session_request(sess, create_action));
+        if (OGS_OK != mme_gtp_send_create_session_request(sess, create_action)) {
+            ogs_error("Failed to send create session request");
+            r = nas_eps_send_pdn_connectivity_reject(
+                    sess, OGS_NAS_ESM_CAUSE_NETWORK_FAILURE, create_action);
+            ogs_expect(r == OGS_OK);
+            return OGS_ERROR;
+        }
 
         if (!strcmp("sos", sess->session->name)) {
             mme_metrics_inst_global_inc(MME_METR_GLOB_GAUGE_EMERGENCY_BEARERS);
@@ -238,8 +240,8 @@ int esm_handle_information_response(mme_sess_t *sess,
         }
 
         if (SESSION_CONTEXT_IS_AVAILABLE(mme_ue) &&
-            OGS_PDU_SESSION_TYPE_IS_VALID(sess->session->paa.session_type) && 
-            has_valid_bearers(sess)) {
+            OGS_PDU_SESSION_TYPE_IS_VALID(sess->session->paa.session_type))
+        {
             mme_csmap_t *csmap = mme_csmap_find_by_tai(&mme_ue->tai);
             mme_ue->csmap = csmap;
 
@@ -252,9 +254,13 @@ int esm_handle_information_response(mme_sess_t *sess,
                 ogs_assert(r != OGS_ERROR);
             }
         } else {
-            ogs_assert(OGS_OK ==
-                mme_gtp_send_create_session_request(
-                    sess, OGS_GTP_CREATE_IN_ATTACH_REQUEST));
+            if (OGS_OK != mme_gtp_send_create_session_request(sess, OGS_GTP_CREATE_IN_ATTACH_REQUEST)) {
+                ogs_error("Failed to send create session request");
+                r = nas_eps_send_pdn_connectivity_reject(
+                        sess, OGS_NAS_ESM_CAUSE_NETWORK_FAILURE, OGS_GTP_CREATE_IN_ATTACH_REQUEST);
+                ogs_expect(r == OGS_OK);
+                return OGS_ERROR;
+            }
         }
     } else {
         if (rsp->access_point_name.length)
@@ -307,23 +313,4 @@ int esm_handle_bearer_resource_modification_request(
         mme_gtp_send_bearer_resource_command(bearer, message));
 
     return OGS_OK;
-}
-
-/* Temporary fix to address issue caused when calling ogs_asn_ip_to_BIT_STRING
- * without the bearer having an assigned sgw_s1u_ip. This case arises when
- * either the SGWC or SMF send a delete bearer request in response to bearer
- * inactivity timeout occurring */
-static bool has_valid_bearers(mme_sess_t *sess) {
-    mme_bearer_t *bearer = NULL;
-    
-    ogs_assert(sess);
-
-    ogs_list_for_each(&sess->bearer_list, bearer) {
-        if ((0 == bearer->sgw_s1u_ip.ipv4) && 
-            (0 == bearer->sgw_s1u_ip.ipv6)) {
-            return false;
-        }
-    }
-
-    return true;
 }

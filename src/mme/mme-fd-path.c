@@ -811,7 +811,7 @@ void mme_s6a_send_air(mme_ue_t *mme_ue,
 
     /* Add a preference on diameter peers based on if the UE is roaming or not */
     fd_msg_hdr(req, &hdr);
-    if (plmn_id_is_roaming(&mme_ue->tai.plmn_id)) {
+    if (imsi_is_roaming(&mme_ue->nas_mobile_identity_imsi)) {
         hdr->msg_peer_pref = OGS_DIAM_PEER_PREF_RELAY;
     } else {
         hdr->msg_peer_pref = OGS_DIAM_S6A_APPLICATION_ID;
@@ -1240,7 +1240,7 @@ void mme_s6a_send_ulr(mme_ue_t *mme_ue)
 
     /* Add a preference on diameter peers based on if the UE is roaming or not */
     fd_msg_hdr(req, &hdr);
-    if (plmn_id_is_roaming(&mme_ue->tai.plmn_id)) {
+    if (imsi_is_roaming(&mme_ue->nas_mobile_identity_imsi)) {
         hdr->msg_peer_pref = OGS_DIAM_PEER_PREF_RELAY;
     } else {
         hdr->msg_peer_pref = OGS_DIAM_S6A_APPLICATION_ID;
@@ -1341,7 +1341,7 @@ void mme_s6a_send_pur(mme_ue_t *mme_ue)
 
     /* Add a preference on diameter peers based on if the UE is roaming or not */
     fd_msg_hdr(req, &hdr);
-    if (plmn_id_is_roaming(&mme_ue->tai.plmn_id)) {
+    if (imsi_is_roaming(&mme_ue->nas_mobile_identity_imsi)) {
         hdr->msg_peer_pref = OGS_DIAM_PEER_PREF_RELAY;
     } else {
         hdr->msg_peer_pref = OGS_DIAM_S6A_APPLICATION_ID;
@@ -1519,9 +1519,23 @@ static void mme_s6a_ula_cb(void *data, struct msg **msg)
             &subdatamask);
 
         if (!(subdatamask & OGS_DIAM_S6A_SUBDATA_NAM)) {
-            mme_ue->network_access_mode = 0;
+            const char *network_access_mode_str = "unknown";
+            mme_ue->network_access_mode = mme_self()->network_access_mode_default;
+
+            switch (mme_ue->network_access_mode) {
+                case OGS_NETWORK_ACCESS_MODE_PACKET_AND_CIRCUIT:
+                    network_access_mode_str = "OGS_NETWORK_ACCESS_MODE_PACKET_AND_CIRCUIT";
+                    break;
+                case OGS_NETWORK_ACCESS_MODE_RESERVED:
+                    network_access_mode_str = "OGS_NETWORK_ACCESS_MODE_RESERVED";
+                    break;
+                case OGS_NETWORK_ACCESS_MODE_ONLY_PACKET:
+                    network_access_mode_str = "OGS_NETWORK_ACCESS_MODE_ONLY_PACKET";
+                    break;
+            }
+            
             ogs_warn("no subscribed Network-Access-Mode, defaulting to "
-                "PACKET_AND_CIRCUIT (0)");
+                "%s (%i)", network_access_mode_str, mme_ue->network_access_mode);
         }
         if (!(subdatamask & OGS_DIAM_S6A_SUBDATA_CC)) {
             memcpy(mme_ue->charging_characteristics, (uint8_t *)"\x00\x00", 
@@ -2552,7 +2566,7 @@ static int push_pcscf_restoration_event(mme_ue_t *mme_ue)
 int mme_fd_init(void)
 {
     int ret;
-    struct disp_when data;
+    struct disp_when data = {};
 
     ret = ogs_diam_init(FD_MODE_CLIENT,
                 mme_self()->diam_conf_path, mme_self()->diam_config);
@@ -2573,7 +2587,7 @@ int mme_fd_init(void)
     /* Specific handler for Cancel-Location-Request */
     data.command = ogs_diam_s6a_cmd_clr;
     ret = fd_disp_register(mme_ogs_diam_s6a_clr_cb, DISP_HOW_CC, &data, NULL,
-                &hdl_s6a_clr);
+            &hdl_s6a_clr);
     ogs_assert(ret == 0);
 
     /* Specific handler for Insert-Subscriber-Data-Request */

@@ -253,6 +253,11 @@ sgwc_ue_t *sgwc_ue_add(uint8_t *imsi, int imsi_len)
     return sgwc_ue;
 }
 
+sgwc_ue_t *sgwc_ue_cycle(sgwc_ue_t *sgwc_ue)
+{
+    return ogs_pool_cycle(&sgwc_ue_pool, sgwc_ue);
+}
+
 int sgwc_ue_remove(sgwc_ue_t *sgwc_ue)
 {
     ogs_assert(sgwc_ue);
@@ -266,6 +271,8 @@ int sgwc_ue_remove(sgwc_ue_t *sgwc_ue)
     sgwc_sess_remove_all_sync(sgwc_ue);
 
     ogs_pool_free(&sgwc_s11_teid_pool, sgwc_ue->sgw_s11_teid_node);
+
+    memset(sgwc_ue, 0, sizeof(*sgwc_ue));
     ogs_pool_free(&sgwc_ue_pool, sgwc_ue);
 
     ogs_info("[Removed] Number of SGWC-UEs is now %d",
@@ -461,6 +468,8 @@ int sgwc_sess_remove(sgwc_sess_t *sess)
     ogs_free(sess->session.name);
 
     ogs_pool_free(&sgwc_sxa_seid_pool, sess->sgwc_sxa_seid_node);
+
+    memset(sess, 0, sizeof(*sess));
     ogs_pool_free(&sgwc_sess_pool, sess);
 
     stats_remove_sgwc_session();
@@ -694,6 +703,28 @@ sgwc_bearer_t *sgwc_bearer_find_by_ue_ebi(sgwc_ue_t *sgwc_ue, uint8_t ebi)
         }
     }
 
+    return NULL;
+}
+
+sgwc_bearer_t *sgwc_bearer_find_by_sess_urr_id(sgwc_sess_t *sess, uint32_t urr_id)
+{
+    sgwc_bearer_t *bearer = NULL;
+    sgwc_tunnel_t *tunnel = NULL;
+
+    ogs_assert(sess);
+    ogs_list_for_each(&sess->bearer_list, bearer) {
+        ogs_list_for_each(&bearer->tunnel_list, tunnel) {
+            ogs_assert(tunnel->pdr);
+            for (int i = 0; i < tunnel->pdr->num_of_urr; ++i) {
+                ogs_pfcp_urr_t *urr = tunnel->pdr->urr[i];
+
+                if (urr->id == urr_id) {
+                    return bearer;
+                }
+            }
+        }
+    }
+    
     return NULL;
 }
 

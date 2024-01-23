@@ -373,7 +373,6 @@ const char *ogs_inet_ntop(void *sa, char *buf, int buflen)
                 INET6_ADDRSTRLEN);
     default:
         ogs_fatal("Unknown family(%d)", family);
-        ogs_abort();
         return NULL;
     }
 }
@@ -441,6 +440,33 @@ bool ogs_sockaddr_is_equal(void *p, void *q)
     case AF_INET6:
         if (a->sin6.sin6_port != b->sin6.sin6_port)
             return false;
+        if (memcmp(&a->sin6.sin6_addr, &b->sin6.sin6_addr, sizeof(struct in6_addr)) != 0)
+            return false;
+        return true;
+    default:
+        ogs_error("Unexpected address faimily %u", a->ogs_sa_family);
+        ogs_abort();
+    }
+}
+
+bool ogs_sockaddr_is_equal_addr_only(void *p, void *q)
+{
+    ogs_sockaddr_t *a, *b;
+
+    a = p;
+    ogs_assert(a);
+    b = q;
+    ogs_assert(b);
+
+    if (a->ogs_sa_family != b->ogs_sa_family)
+        return false;
+
+    switch (a->ogs_sa_family) {
+    case AF_INET:
+        if (memcmp(&a->sin.sin_addr, &b->sin.sin_addr, sizeof(struct in_addr)) != 0)
+            return false;
+        return true;
+    case AF_INET6:
         if (memcmp(&a->sin6.sin6_addr, &b->sin6.sin6_addr, sizeof(struct in6_addr)) != 0)
             return false;
         return true;

@@ -82,6 +82,9 @@ uint8_t mme_s6a_handle_ula(
     ogs_slice_data_t *slice_data = NULL;
     int r, rv, num_of_session;
 
+    ogs_debug("Handle ULA");
+
+    mme_ue = mme_ue_cycle(mme_ue);
     ogs_assert(mme_ue);
     ogs_assert(s6a_message);
     ula_message = &s6a_message->ula_message;
@@ -109,6 +112,37 @@ uint8_t mme_s6a_handle_ula(
     mme_ue->num_of_session = num_of_session;
 
     mme_ue->context_identifier = slice_data->context_identifier;
+
+    /* If there is no sos session and the config has specified to add one, we add one */
+    if ((NULL == mme_emergency_session(mme_ue)) && (0 != mme_self()->default_emergency_session_type)) {
+        if (mme_ue->num_of_session < OGS_MAX_NUM_OF_SESS) {
+            ogs_info("No sos session was present for UE, adding our default now...");
+            ogs_session_t *session = &mme_ue->session[mme_ue->num_of_session];
+            
+            session->name = ogs_strdup("sos");
+            session->context_identifier = 0;
+            session->session_type = mme_self()->default_emergency_session_type;
+            memset(&session->paa, 0, sizeof(session->paa));
+            session->charging_characteristics_presence = false;
+            session->qos.arp.pre_emption_capability = 1;
+            session->qos.arp.pre_emption_vulnerability = 1;
+            session->qos.arp.priority_level = 1;
+            session->qos.gbr.downlink = 0;
+            session->qos.gbr.uplink = 0;
+            session->qos.index = 5;
+            session->qos.mbr.downlink = 0;
+            session->qos.mbr.uplink = 0;
+            session->ambr.downlink = 128000;
+            session->ambr.uplink = 128000;
+            memset(&session->smf_ip, 0, sizeof(session->smf_ip));
+
+            mme_ue->num_of_session++;
+            ogs_debug("number of sessions is now %i", mme_ue->num_of_session);
+        } else {
+            ogs_error("Cannot add sos session to mme_ue, not enough session slots... rejecting UE...");
+            return OGS_NAS_EMM_CAUSE_SEVERE_NETWORK_FAILURE;
+        }
+    }
 
     if (mme_ue->nas_eps.type == MME_EPS_TYPE_ATTACH_REQUEST) {
         rv = nas_eps_send_emm_to_esm(mme_ue,
@@ -207,6 +241,8 @@ void mme_s6a_handle_clr(mme_ue_t *mme_ue, ogs_diam_s6a_message_t *s6a_message)
     ogs_assert(s6a_message);
     clr_message = &s6a_message->clr_message;
     ogs_assert(clr_message);
+
+    ogs_debug("Handle CLR");
 
     mme_ue = mme_ue_cycle(mme_ue);
     if (!mme_ue) {

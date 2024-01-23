@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
+#include <ogs-core.h>
 
 enum
 {
@@ -33,14 +34,13 @@ enum
     SGW_NAME_STR_MAX_LEN = 32,
     IPV4_STR_MAX_LEN = 16,
     IMSI_STR_MAX_LEN = 16,
-    APN_STR_MAX_LEN = 16,
+    APN_STR_MAX_LEN = 64,
     MSISDN_BCD_STR_MAX_LEN = 16,
     IMEISV_BCD_STR_MAX_LEN = 32,
     TIMEZONE_RAW_STR_MAX_LEN = 16,
     EVENT_STR_MAX_LEN = 32,
     IP_STR_MAX_LEN = 64,
-    LOG_DIR_STR_MAX_LEN = 64,
-    PLACEHOLDER_STR_MAX_LEN = 32,
+    LOG_DIR_STR_MAX_LEN = 64
 };
 
 typedef struct
@@ -52,7 +52,7 @@ typedef struct
     uint64_t octets_out;
 
     char event[EVENT_STR_MAX_LEN];
-    char charging_id[PLACEHOLDER_STR_MAX_LEN];
+    uint32_t charging_id;
     char msisdn_bcd[MSISDN_BCD_STR_MAX_LEN];
     char imeisv_bcd[IMEISV_BCD_STR_MAX_LEN];
     char timezone_raw[TIMEZONE_RAW_STR_MAX_LEN];
@@ -60,8 +60,10 @@ typedef struct
     uint16_t tac;
     uint32_t eci;
     char sgw_ip[IP_STR_MAX_LEN];
-    char ue_ip[IP_STR_MAX_LEN];
+    char ue_ipv4[OGS_ADDRSTRLEN];
+    char ue_ipv6[OGS_ADDRSTRLEN];
     char pgw_ip[IP_STR_MAX_LEN];
+    bool dedicated_bearer;
 } UsageLoggerData;
 
 typedef struct

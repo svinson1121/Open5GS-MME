@@ -369,7 +369,7 @@ void mme_state_operational(ogs_fsm_t *s, mme_event_t *e)
         break;
 
     case MME_EVENT_EMM_MESSAGE:
-        enb_ue = e->enb_ue;
+        enb_ue = enb_ue_cycle(e->enb_ue);
         ogs_assert(enb_ue);
         pkbuf = e->pkbuf;
         ogs_assert(pkbuf);
@@ -380,11 +380,11 @@ void mme_state_operational(ogs_fsm_t *s, mme_event_t *e)
             return;
         }
 
-        mme_ue = enb_ue->mme_ue;
+        mme_ue = mme_ue_cycle(enb_ue->mme_ue);
         if (!mme_ue) {
             mme_ue = mme_ue_find_by_message(&nas_message);
             if (!mme_ue) {
-                mme_ue = mme_ue_add(enb_ue);
+                mme_ue = mme_ue_add(enb_ue, &nas_message);
                 if (mme_ue == NULL) {
                     r = s1ap_send_ue_context_release_command(enb_ue,
                             S1AP_Cause_PR_misc,
@@ -466,8 +466,11 @@ void mme_state_operational(ogs_fsm_t *s, mme_event_t *e)
         break;
 
     case MME_EVENT_ESM_MESSAGE:
-        mme_ue = e->mme_ue;
-        ogs_assert(mme_ue);
+        mme_ue = mme_ue_cycle(e->mme_ue);
+        if (NULL == mme_ue) {
+            ogs_error("Got MME_EVENT_ESM_MESSAGE for a mme_ue that doesn't exist!");
+            break;
+        }
 
         pkbuf = e->pkbuf;
         ogs_assert(pkbuf);
@@ -901,7 +904,7 @@ void mme_state_operational(ogs_fsm_t *s, mme_event_t *e)
         ogs_info("P-CSCF Restoration");
         ogs_info("    IMSI[%s] PTI[%d]",
                 mme_ue->imsi_bcd, sess->pti);
-        if (MME_HAVE_SGW_S1U_PATH(sess)) {
+        if (mme_ue->sgw_ue && MME_HAVE_SGW_S1U_PATH(sess)) {
             ogs_assert(OGS_OK ==
                 mme_gtp_send_delete_session_request(mme_ue->sgw_ue, sess,
                 OGS_GTP_DELETE_SEND_DEACTIVATE_BEARER_CONTEXT_REQUEST));

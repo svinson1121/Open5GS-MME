@@ -129,7 +129,6 @@ typedef struct mme_context_s {
 
     ogs_list_t      sgw_list;       /* SGW GTPC Client List */
     ogs_list_t      sgw_roaming_list; /* SGW GTPC Client List for roaming UEs */
-    mme_sgw_t       *sgw;           /* Iterator for SGW round-robin */
     
     ogs_list_t      sbcap_list;     /* MME SBC IPv4 Server List */
     ogs_list_t      sbcap_list6;    /* MME SBC IPv6 Server List */
@@ -214,6 +213,7 @@ typedef struct mme_context_s {
     bool emergency_bearer_services;
     size_t num_emergency_number_list_items;
     emergency_number_list_item_t emergency_number_list[MAX_NUM_EMERGENCY_NUMBER_LIST_ITEMS];
+    int default_emergency_session_type;
 
     /* DNS */
     bool dns_target_sgw;
@@ -229,6 +229,8 @@ typedef struct mme_context_s {
     
     /* Cell Broadcast Service */
     mme_cbc_t cbc;
+
+    uint32_t network_access_mode_default;
 } mme_context_t;
 
 typedef struct mme_sgw_s {
@@ -576,10 +578,6 @@ struct mme_ue_s {
     /* SGW UE context */
     sgw_ue_t        *sgw_ue;
 
-    /* The PGW that the SGW will use */
-    ogs_sockaddr_t  *pgw_addr;
-    ogs_sockaddr_t  *pgw_addr6;
-
     /* Save PDN Connectivity Request */
     ogs_nas_esm_message_container_t pdn_connectivity_request;
 
@@ -839,6 +837,7 @@ mme_sgw_t *mme_sgw_roaming_add(ogs_sockaddr_t *addr);
 void mme_sgw_roaming_remove(mme_sgw_t *sgw);
 void mme_sgw_roaming_remove_all(void);
 mme_sgw_t *mme_sgw_roaming_find_by_addr(ogs_sockaddr_t *addr);
+mme_sgw_t *select_random_sgw(void);
 mme_sgw_t *select_random_sgw_roaming(void);
 
 mme_pgw_t *mme_pgw_add(ogs_sockaddr_t *addr);
@@ -899,7 +898,7 @@ sgw_relocation_e sgw_ue_check_if_relocated(mme_ue_t *mme_ue);
 void mme_ue_new_guti(mme_ue_t *mme_ue);
 void mme_ue_confirm_guti(mme_ue_t *mme_ue);
 
-mme_ue_t *mme_ue_add(enb_ue_t *enb_ue);
+mme_ue_t *mme_ue_add(enb_ue_t *enb_ue, ogs_nas_eps_message_t *nas_message);
 void mme_ue_remove(mme_ue_t *mme_ue);
 void mme_ue_remove_all(void);
 mme_ue_t *mme_ue_cycle(mme_ue_t *mme_ue);
@@ -924,6 +923,8 @@ bool mme_ue_have_session_release_pending(mme_ue_t *mme_ue);
 bool mme_sess_have_session_release_pending(mme_sess_t *sess);
 
 int mme_ue_xact_count(mme_ue_t *mme_ue, uint8_t org);
+
+bool imsi_is_roaming(ogs_nas_mobile_identity_imsi_t *nas_imsi);
 
 /*
  * o RECV Initial UE-Message : S-TMSI
@@ -995,6 +996,7 @@ mme_sess_t *mme_sess_find_by_apn(mme_ue_t *mme_ue, char *apn);
 mme_sess_t *mme_sess_first(mme_ue_t *mme_ue);
 mme_sess_t *mme_sess_next(mme_sess_t *sess);
 unsigned int mme_sess_count(mme_ue_t *mme_ue);
+mme_sess_t *mme_sess_cycle(mme_sess_t *sess);
 
 mme_bearer_t *mme_bearer_add(mme_sess_t *sess);
 void mme_bearer_remove(mme_bearer_t *bearer);
@@ -1025,8 +1027,6 @@ void mme_ebi_pool_clear(mme_ue_t *mme_ue);
 
 uint8_t mme_selected_int_algorithm(mme_ue_t *mme_ue);
 uint8_t mme_selected_enc_algorithm(mme_ue_t *mme_ue);
-
-bool plmn_id_is_roaming(ogs_plmn_id_t *plmn_id);
 
 #ifdef __cplusplus
 }

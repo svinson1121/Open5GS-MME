@@ -75,6 +75,32 @@ static void _gtpv2_c_recv_cb(short when, ogs_socket_t fd, void *data)
      *   "Context not found".
      */
     gnode = ogs_gtp_node_find_by_addr(&sgwc_self()->pgw_s5c_list, &from);
+
+    /* If we have a node with the same address but different port add it as new node */
+    if ((NULL == gnode) &&
+        (NULL != ogs_gtp_node_find_by_addr_only(&sgwc_self()->pgw_s5c_list, &from)))
+    {
+        gnode = ogs_gtp_node_add_by_addr(&sgwc_self()->pgw_s5c_list, &from);
+        if (!gnode) {
+            ogs_error("Failed to create new gnode(%s:%u), mempool full, ignoring msg!",
+                      OGS_ADDR(&from, frombuf), OGS_PORT(&from));
+            ogs_pkbuf_free(pkbuf);
+            return;
+        }
+    	gnode->sock = data;
+    } else if (OGS_GTPV2_C_UDP_PORT != OGS_PORT(&from)) {
+        /* Catch special case when SGWC is restarted and PGW sends a message
+         * on non-gtp port due to state mismatch */
+        gnode = ogs_gtp_node_add_by_addr(&sgwc_self()->pgw_s5c_list, &from);
+        if (!gnode) {
+            ogs_error("Failed to create new gnode(%s:%u), mempool full, ignoring msg!",
+                      OGS_ADDR(&from, frombuf), OGS_PORT(&from));
+            ogs_pkbuf_free(pkbuf);
+            return;
+        }
+        gnode->sock = data;
+    }
+
     if (gnode) {
         e = sgwc_event_new(SGWC_EVT_S5C_MESSAGE);
         ogs_assert(e);
@@ -147,11 +173,23 @@ static void bearer_timeout(ogs_gtp_xact_t *xact, void *data)
     uint8_t type = 0;
 
     ogs_assert(xact);
-    ogs_assert(bearer);
-    sess = bearer->sess;
-    ogs_assert(sess);
-    sgwc_ue = sess->sgwc_ue;
-    ogs_assert(sgwc_ue);
+    bearer = sgwc_bearer_cycle(bearer);    
+    if (NULL == bearer) {
+        ogs_error("Got a bearer timeout for a bearer that dosn't exist anymore!");
+        return;
+    }
+    
+    sess = sgwc_sess_cycle(bearer->sess);
+    if (NULL == sess) {
+        ogs_error("Got a bearer timeout for a sess that dosn't exist anymore!");
+        return;
+    }
+
+    sgwc_ue = sgwc_ue_cycle(sess->sgwc_ue);
+    if (NULL == sgwc_ue) {
+        ogs_error("Got a bearer timeout for a sgw_ue that dosn't exist anymore!");
+        return;
+    }
 
     type = xact->seq[0].type;
 

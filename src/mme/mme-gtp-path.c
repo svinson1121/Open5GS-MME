@@ -101,8 +101,11 @@ static void timeout(ogs_gtp_xact_t *xact, void *data)
         break;
     case OGS_GTP2_CREATE_SESSION_REQUEST_TYPE:
     case OGS_GTP2_DELETE_SESSION_REQUEST_TYPE:
-        sess = data;
-        ogs_assert(sess);
+        sess = mme_sess_cycle(data);
+        if (NULL == sess) {
+            ogs_error("OGS_GTP2_DELETE_SESSION_REQUEST_TYPE timeout for mme_sess that doesn't exist anymore");
+            return;
+        }
         mme_ue = sess->mme_ue;
         ogs_assert(mme_ue);
         break;
@@ -215,11 +218,164 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
     ogs_gtp_xact_t *xact = NULL;
     mme_ue_t *mme_ue = NULL;
     sgw_ue_t *sgw_ue = NULL;
+    ogs_session_t *session = NULL;
 
+    ogs_assert(sess);
     mme_ue = sess->mme_ue;
     ogs_assert(mme_ue);
+    session = sess->session;
+    ogs_assert(session);
     sgw_ue = sgw_ue_cycle(mme_ue->sgw_ue);
+
+    /* Pick SGW if one has not been chosen */
+    if (NULL == sgw_ue) {
+        mme_sgw_t *sgw = NULL;
+
+        if (0 == strcmp(session->name, "sos")) {
+            /* If APN is SOS then skip DNS lookup and assign SGW/PGW from local config */
+            sgw = select_random_sgw();
+        } else if (imsi_is_roaming(&mme_ue->nas_mobile_identity_imsi)) {
+            sgw = select_random_sgw_roaming();
+        } else if (mme_self()->dns_target_sgw) {
+            char ipv4[INET_ADDRSTRLEN] = "";
+            ResolverContext context = {};
+            /* We do not include the APN for SGW lookups */
+            snprintf(context.mnc, DNS_RESOLVERS_MAX_MNC_STR, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
+            snprintf(context.mcc, DNS_RESOLVERS_MAX_MCC_STR, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
+            strncpy(context.target, "sgw", DNS_RESOLVERS_MAX_TARGET_STR);
+            strncpy(context.interface, "s11", DNS_RESOLVERS_MAX_INTERFACE_STR);
+            strncpy(context.protocol, "gtp", DNS_RESOLVERS_MAX_PROTOCOL_STR);
+            strncpy(context.domain_suffix, mme_self()->dns_base_domain, DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR);
+
+            if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
+                ogs_sockaddr_t *sgw_addr = NULL;
+
+                ogs_info("NAPTR resolve success, SGW address is '%s'", ipv4);
+
+                ogs_addaddrinfo(
+                    &sgw_addr,
+                    AF_INET,
+                    ipv4,
+                    ogs_gtp_self()->gtpc_port,
+                    0
+                );
+
+                if (NULL != sgw_addr) {
+                    sgw = mme_sgw_find_by_addr(sgw_addr);
+
+                    if (NULL == sgw) {
+                        sgw = mme_sgw_add(sgw_addr);
+                    }
+                } else {
+                    ogs_error("Failed to set SGW address to '%s', falling back to default selection method", ipv4);
+                }
+            }
+            else {
+                ogs_error("Failed to resolve dns and update SGW IP in CSR, falling back to default selection method");
+            }
+        }
+
+        if (NULL == sgw) {
+            sgw = select_random_sgw();
+        }
+
+        ogs_assert(sgw);
+        sgw_ue = sgw_ue_add(sgw);
+        ogs_assert(sgw_ue);
+        ogs_assert(sgw_ue->gnode);
+        sgw_ue_associate_mme_ue(sgw_ue, mme_ue);
+    }
     ogs_assert(sgw_ue);
+
+    /* If this is a SOS APN the we want to set the address in the session to a local PGW */
+    if (0 == strcmp(session->name, "sos")) {
+        /* The sessions PGW is of higher priority it will be the one chosen in mme_s11_build_create_session_request */
+        if ((NULL == session->pgw_addr) && (NULL == session->pgw_addr6)) {
+            session->pgw_addr = mme_pgw_addr_select_random(
+                &mme_self()->pgw_list, AF_INET);
+            session->pgw_addr6 = mme_pgw_addr_select_random(
+                &mme_self()->pgw_list, AF_INET6);            
+        }
+    } else if ((NULL == session->pgw_addr) && (NULL == session->pgw_addr6)) {
+        /* Pick PGW if one has not been chosen */
+
+        if (mme_self()->dns_target_pgw) {
+            bool resolved_dns = false;
+            enum { MAX_MCC_MNC_STR = 4 };
+            char ipv4[INET_ADDRSTRLEN] = "";
+            ResolverContext context = {};
+            char mme_mcc[MAX_MCC_MNC_STR] = "";
+            char mme_mnc[MAX_MCC_MNC_STR] = "";
+            char imsi_mcc[MAX_MCC_MNC_STR] = "000";
+            char imsi_mnc_2[MAX_MCC_MNC_STR] = "000";
+            char imsi_mnc_3[MAX_MCC_MNC_STR] = "000";
+            
+            /* Load MCC and MNC from config and format them */
+            snprintf(mme_mcc, MAX_MCC_MNC_STR, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
+            snprintf(mme_mnc, MAX_MCC_MNC_STR, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
+            strncpy(context.apn, sess->session->name, DNS_RESOLVERS_MAX_APN_STR);
+            strncpy(context.target, "pgw", DNS_RESOLVERS_MAX_TARGET_STR);
+            strncpy(context.protocol, "gtp", DNS_RESOLVERS_MAX_PROTOCOL_STR);
+            /* Load our domain suffix from the config */
+            strncpy(context.domain_suffix, mme_self()->dns_base_domain, DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR);
+
+            memcpy(imsi_mcc, &mme_ue->imsi_bcd[0], 3);
+            memcpy(&imsi_mnc_2[1], &mme_ue->imsi_bcd[3], 2);
+            memcpy(imsi_mnc_3, &mme_ue->imsi_bcd[3], 3);
+
+            strncpy(context.mcc, imsi_mcc, DNS_RESOLVERS_MAX_MCC_STR);
+
+            if (imsi_is_roaming(&mme_ue->nas_mobile_identity_imsi)) {
+                /* This is roaming, check roaming with a 3 digit MNC */
+                strncpy(context.interface, "s8", DNS_RESOLVERS_MAX_INTERFACE_STR);
+                strcpy(context.mnc, imsi_mnc_3);
+
+                ogs_debug("Attempting NAPTR resolv for roming [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
+                if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
+                    /* We resolved for roming */
+                    resolved_dns = true;
+                } else {
+                    /* We failed to resolve with assumption of a 3 digit MNC,
+                    * try the 2 digit MNC */
+                    strcpy(context.mnc, imsi_mnc_2);
+
+                    ogs_debug("Attempting NAPTR resolv for roming [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
+                    resolved_dns = resolve_naptr(&context, ipv4, INET_ADDRSTRLEN);
+                }
+            } else {
+                /* Might be home, check home */
+                strncpy(context.interface, "s5", DNS_RESOLVERS_MAX_INTERFACE_STR);
+                strncpy(context.mnc, mme_mnc, DNS_RESOLVERS_MAX_MNC_STR);
+                
+                ogs_debug("Attempting NAPTR resolv for home [MCC:%s] [MNC:%s]\n", context.mcc, context.mnc);
+                resolved_dns = resolve_naptr(&context, ipv4, INET_ADDRSTRLEN);
+            }
+
+            if (resolved_dns) {
+                ogs_info("NAPTR resolve success, PGW address is '%s'", ipv4);
+                ogs_addaddrinfo(
+                    &session->pgw_addr,
+                    AF_INET,
+                    ipv4,
+                    ogs_gtp_self()->gtpc_port,
+                    0
+                );
+            } else {
+                ogs_info("Failed to resolve dns and update PGW IP in CSR, cannot send Create Session Request");
+            }
+        } else {
+            session->pgw_addr = mme_pgw_addr_select_random(
+                &mme_self()->pgw_list, AF_INET);
+            session->pgw_addr6 = mme_pgw_addr_select_random(
+                &mme_self()->pgw_list, AF_INET6);
+        }
+
+        if ((NULL == session->pgw_addr) && (NULL == session->pgw_addr6)) {
+            /* If we failed to assign an address return error */
+            ogs_error("Failed to assign a PGW address");
+            return OGS_ERROR;
+        }
+    }
 
     if (create_action == OGS_GTP_CREATE_IN_PATH_SWITCH_REQUEST) {
         sgw_ue = sgw_ue_cycle(sgw_ue->target_ue);
@@ -234,39 +390,6 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
     if (!pkbuf) {
         ogs_error("mme_s11_build_create_session_request() failed");
         return OGS_ERROR;
-    }
-
-    if (plmn_id_is_roaming(&mme_ue->tai.plmn_id)) {
-        /* If the current sgw isnt a roaming one then randomly select a roaming one */
-        if (!mme_sgw_roaming_find_by_addr(&mme_ue->sgw_ue->sgw->gnode.addr)) {
-            mme_sgw_t *sgw = select_random_sgw_roaming();
-
-            if (sgw) {
-                ogs_info("Changing SGWC node to roaming node");
-                mme_ue->sgw_ue->sgw = sgw;
-            } else {
-                ogs_error("Roaming UE could not be given a roaming SGW as none have been specified in the config");
-            }
-        }
-    } else if (mme_self()->dns_target_sgw) {
-        char ipv4[INET_ADDRSTRLEN] = "";
-        ResolverContext context = {};
-        /* We do not include the APN for SGW lookups */
-        snprintf(context.mnc, DNS_RESOLVERS_MAX_MNC_STR, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
-        snprintf(context.mcc, DNS_RESOLVERS_MAX_MCC_STR, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
-        strncpy(context.target, "sgw", DNS_RESOLVERS_MAX_TARGET_STR);
-        strncpy(context.interface, "s11", DNS_RESOLVERS_MAX_INTERFACE_STR);
-        strncpy(context.protocol, "gtp", DNS_RESOLVERS_MAX_PROTOCOL_STR);
-        strncpy(context.domain_suffix, mme_self()->dns_base_domain, DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR);
-
-        if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
-            /* Clobber the SGW addr if we resolved */
-            ogs_info("Successfully clobbered the SGW IP in CSR with '%s'", ipv4);
-            ogs_ipv4_from_string((uint32_t*)&sgw_ue->gnode->addr.sa.sa_data[2], ipv4);
-        }
-        else {
-            ogs_warn("Failed to resolve dns and update SGW IP in CSR");
-        }
     }
 
     xact = ogs_gtp_xact_local_create(sgw_ue->gnode, &h, pkbuf, timeout, sess);
@@ -296,7 +419,13 @@ int mme_gtp_send_modify_bearer_request(
 
     ogs_assert(mme_ue);
     sgw_ue = mme_ue->sgw_ue;
-    ogs_assert(sgw_ue);
+
+    if (NULL == sgw_ue) {
+        /* sgw_ue is set in mme_gtp_send_create_session_request */
+        ogs_error("Trying to send a modify bearer request before create session request has been sent");
+        ogs_error("\tuli_presence: %i, modify_action: %i", uli_presence, modify_action);
+        return OGS_ERROR;
+    }
 
     memset(&h, 0, sizeof(ogs_gtp2_header_t));
     h.type = OGS_GTP2_MODIFY_BEARER_REQUEST_TYPE;
@@ -335,7 +464,12 @@ int mme_gtp_send_delete_session_request(
     ogs_assert(sess);
     mme_ue = sess->mme_ue;
     ogs_assert(mme_ue);
-    ogs_assert(sgw_ue);
+
+    if (NULL == sgw_ue) {
+        /* If the sgw_ue was never set we don't need to do anything */
+        ogs_warn("Trying to send a delete session request before create session request has been sent");
+        return OGS_ERROR;
+    }
 
     memset(&h, 0, sizeof(ogs_gtp2_header_t));
     h.type = OGS_GTP2_DELETE_SESSION_REQUEST_TYPE;
@@ -369,13 +503,18 @@ void mme_gtp_send_delete_all_sessions(mme_ue_t *mme_ue, int action)
     mme_sess_t *sess = NULL, *next_sess = NULL;
     sgw_ue_t *sgw_ue = NULL;
 
-    ogs_assert(mme_ue);
-    sgw_ue = mme_ue->sgw_ue;
-    ogs_assert(sgw_ue);
+    mme_ue = mme_ue_cycle(mme_ue);
+    if (NULL == mme_ue) {
+        ogs_error("Trying to delete all sessions from mme_ue that doesn't exist!");
+        return;
+    }
+
     ogs_assert(action);
+    
+    sgw_ue = mme_ue->sgw_ue;
 
     ogs_list_for_each_safe(&mme_ue->sess_list, next_sess, sess) {
-        if (MME_HAVE_SGW_S1U_PATH(sess)) {
+        if (sgw_ue && MME_HAVE_SGW_S1U_PATH(sess)) {
             mme_gtp_send_delete_session_request(sgw_ue, sess, action);
         } else {
             mme_sess_remove(sess);
@@ -399,7 +538,14 @@ int mme_gtp_send_create_bearer_response(
     mme_ue = bearer->mme_ue;
     ogs_assert(mme_ue);
     sgw_ue = mme_ue->sgw_ue;
-    ogs_assert(sgw_ue);
+    
+    if (NULL == sgw_ue) {
+        /* sgw_ue is set in mme_gtp_send_create_session_request */
+        ogs_error("Trying to send a create bearer response before create session request has been sent");
+        ogs_error("\tcause_value: %i", cause_value);
+        return OGS_ERROR;
+    }
+
     xact = ogs_gtp_xact_cycle(bearer->create.xact);
     if (!xact) {
         ogs_warn("GTP transaction(CREATE) has already been removed");
@@ -444,7 +590,14 @@ int mme_gtp_send_update_bearer_response(
     mme_ue = bearer->mme_ue;
     ogs_assert(mme_ue);
     sgw_ue = mme_ue->sgw_ue;
-    ogs_assert(sgw_ue);
+
+    if (NULL == sgw_ue) {
+        /* sgw_ue is set in mme_gtp_send_create_session_request */
+        ogs_error("Trying to send a update bearer response before create session request has been sent");
+        ogs_error("\tcause_value: %i", cause_value);
+        return OGS_ERROR;
+    }
+
     xact = ogs_gtp_xact_cycle(bearer->update.xact);
     if (!xact) {
         ogs_warn("GTP transaction(UPDATE) has already been removed");
@@ -489,7 +642,14 @@ int mme_gtp_send_delete_bearer_response(
     mme_ue = bearer->mme_ue;
     ogs_assert(mme_ue);
     sgw_ue = mme_ue->sgw_ue;
-    ogs_assert(sgw_ue);
+
+    if (NULL == sgw_ue) {
+        /* sgw_ue is set in mme_gtp_send_create_session_request */
+        ogs_error("Trying to send a delete bearer response before create session request has been sent");
+        ogs_error("\tcause_value: %i", cause_value);
+        return OGS_ERROR;
+    }
+
     xact = ogs_gtp_xact_cycle(bearer->delete.xact);
     if (!xact) {
         ogs_warn("GTP transaction(DELETE) has already been removed");
@@ -529,7 +689,13 @@ int mme_gtp_send_release_access_bearers_request(mme_ue_t *mme_ue, int action)
     ogs_assert(action);
     ogs_assert(mme_ue);
     sgw_ue = mme_ue->sgw_ue;
-    ogs_assert(sgw_ue);
+
+    if (NULL == sgw_ue) {
+        /* sgw_ue is set in mme_gtp_send_create_session_request */
+        ogs_error("Trying to send a release access bearers request before create session request has been sent");
+        ogs_error("\taction: %i", action);
+        return OGS_ERROR;
+    }
 
     memset(&h, 0, sizeof(ogs_gtp2_header_t));
     h.type = OGS_GTP2_RELEASE_ACCESS_BEARERS_REQUEST_TYPE;
@@ -563,7 +729,7 @@ void mme_gtp_send_release_all_ue_in_enb(mme_enb_t *enb, int action)
     ogs_list_for_each_safe(&enb->enb_ue_list, next, enb_ue) {
         mme_ue = enb_ue->mme_ue;
 
-        if (mme_ue) {
+        if (mme_ue && mme_ue->sgw_ue) {
             if (action == OGS_GTP_RELEASE_S1_CONTEXT_REMOVE_BY_LO_CONNREFUSED) {
                 /*
                  * https://github.com/open5gs/open5gs/pull/1497
@@ -625,7 +791,13 @@ int mme_gtp_send_downlink_data_notification_ack(
     mme_ue = bearer->mme_ue;
     ogs_assert(mme_ue);
     sgw_ue = mme_ue->sgw_ue;
-    ogs_assert(sgw_ue);
+
+    if (NULL == sgw_ue) {
+        /* sgw_ue is set in mme_gtp_send_create_session_request */
+        ogs_error("Trying to send a send downlink data notification ack before create session request has been sent");
+        ogs_error("\tcause_value: %i", cause_value);
+        return OGS_ERROR;
+    }
 
     /* Build Downlink data notification ack */
     memset(&h, 0, sizeof(ogs_gtp2_header_t));
@@ -661,7 +833,12 @@ int mme_gtp_send_create_indirect_data_forwarding_tunnel_request(
 
     ogs_assert(mme_ue);
     sgw_ue = mme_ue->sgw_ue;
-    ogs_assert(sgw_ue);
+
+    if (NULL == sgw_ue) {
+        /* sgw_ue is set in mme_gtp_send_create_session_request */
+        ogs_error("Trying to send a create indirect data forwarding tunnel request before create session request has been sent");
+        return OGS_ERROR;
+    }
 
     memset(&h, 0, sizeof(ogs_gtp2_header_t));
     h.type = OGS_GTP2_CREATE_INDIRECT_DATA_FORWARDING_TUNNEL_REQUEST_TYPE;
@@ -700,7 +877,13 @@ int mme_gtp_send_delete_indirect_data_forwarding_tunnel_request(
     ogs_assert(action);
     ogs_assert(mme_ue);
     sgw_ue = mme_ue->sgw_ue;
-    ogs_assert(sgw_ue);
+
+    if (NULL == sgw_ue) {
+        /* sgw_ue is set in mme_gtp_send_create_session_request */
+        ogs_error("Trying to send a delete indirect data forwarding tunnel request before create session request has been sent");
+        ogs_error("\taction: %i", action);
+        return OGS_ERROR;
+    }
 
     memset(&h, 0, sizeof(ogs_gtp2_header_t));
     h.type = OGS_GTP2_DELETE_INDIRECT_DATA_FORWARDING_TUNNEL_REQUEST_TYPE;
@@ -742,7 +925,12 @@ int mme_gtp_send_bearer_resource_command(
     mme_ue = bearer->mme_ue;
     ogs_assert(mme_ue);
     sgw_ue = mme_ue->sgw_ue;
-    ogs_assert(sgw_ue);
+    
+    if (NULL == sgw_ue) {
+        /* sgw_ue is set in mme_gtp_send_create_session_request */
+        ogs_error("Trying to send a bearer resource command before create session request has been sent");
+        return OGS_ERROR;
+    }
 
     memset(&h, 0, sizeof(ogs_gtp2_header_t));
     h.type = OGS_GTP2_BEARER_RESOURCE_COMMAND_TYPE;

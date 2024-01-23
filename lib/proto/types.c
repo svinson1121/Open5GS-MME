@@ -510,6 +510,16 @@ char *ogs_ipv4_to_string(uint32_t addr)
     return (char*)OGS_INET_NTOP(&addr, buf);
 }
 
+char *ogs_ipv4_to_string_stack(uint32_t addr, char* buf)
+{
+    if (!buf) {
+        ogs_error("buf was NULL");
+        return NULL;
+    }
+
+    return (char*)OGS_INET_NTOP(&addr, buf);
+}
+
 char *ogs_ipv6addr_to_string(uint8_t *addr6)
 {
     char *buf = NULL;
@@ -518,6 +528,18 @@ char *ogs_ipv6addr_to_string(uint8_t *addr6)
     buf = ogs_calloc(1, OGS_ADDRSTRLEN);
     if (!buf) {
         ogs_error("ogs_calloc() failed");
+        return NULL;
+    }
+
+    return (char *)OGS_INET6_NTOP(addr6, buf);
+}
+
+char *ogs_ipv6addr_to_string_stack(uint8_t *addr6, char* buf)
+{
+    ogs_assert(addr6);
+
+    if (!buf) {
+        ogs_error("buf was NULL");
         return NULL;
     }
 

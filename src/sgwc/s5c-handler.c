@@ -148,8 +148,17 @@ void sgwc_s5c_handle_create_session_response(
                     paa.session_type, session_cause);
             cause_value = OGS_GTP2_CAUSE_MANDATORY_IE_INCORRECT;
         } else {
-            sgwc_ue->ue_ip_raw_len = rsp->pdn_address_allocation.len;
-            memcpy(sgwc_ue->ue_ip_raw, rsp->pdn_address_allocation.data, sgwc_ue->ue_ip_raw_len);
+            memset(sess->ue_ipv4, 0, OGS_ADDRSTRLEN);
+            memset(sess->ue_ipv6, 0, OGS_ADDRSTRLEN);
+
+            if (OGS_PDU_SESSION_TYPE_IPV4 == paa.session_type) {
+                ogs_ipv4_to_string_stack(paa.addr, sess->ue_ipv4);
+            } else if (OGS_PDU_SESSION_TYPE_IPV6 == paa.session_type) {
+                ogs_ipv6addr_to_string_stack(paa.addr6, sess->ue_ipv6);
+            } else if (OGS_PDU_SESSION_TYPE_IPV4V6 == paa.session_type) {
+                ogs_ipv4_to_string_stack(paa.addr, sess->ue_ipv4);
+                ogs_ipv6addr_to_string_stack(paa.addr6, sess->ue_ipv6);
+            }
         }
 
     } else {
@@ -272,6 +281,11 @@ void sgwc_s5c_handle_create_session_response(
             ogs_pfcp_ip_to_outer_header_creation(&ul_tunnel->remote_ip,
                 &far->outer_header_creation, &far->outer_header_creation_len));
         far->outer_header_creation.teid = ul_tunnel->remote_teid;
+
+        /* Set the charging id to be used for CDR (See log_start_usage_reports in sxa-handler.c) */
+        if (rsp->bearer_contexts_created[i].charging_id.presence) {
+            bearer->charging_id = rsp->bearer_contexts_created[i].charging_id.u32;
+        }
     }
 
     /* Receive Control Plane(UL) : PGW-S5C */
@@ -544,11 +558,13 @@ void sgwc_s5c_handle_create_bearer_request(
 {
     int rv;
     uint8_t cause_value = 0;
+    uint16_t decoded;
 
     sgwc_ue_t *sgwc_ue = NULL;
     sgwc_bearer_t *bearer = NULL;
     sgwc_tunnel_t *ul_tunnel = NULL;
     ogs_pfcp_far_t *far = NULL;
+    ogs_gtp2_bearer_qos_t bearer_qos = {};
 
     ogs_gtp2_create_bearer_request_t *req = NULL;
     ogs_gtp2_f_teid_t *pgw_s5u_teid = NULL;
@@ -619,6 +635,7 @@ void sgwc_s5c_handle_create_bearer_request(
 
     bearer = sgwc_bearer_add(sess);
     ogs_assert(bearer);
+    bearer->dedicated = 1;
     ul_tunnel = sgwc_ul_tunnel_in_bearer(bearer);
     ogs_assert(ul_tunnel);
 
@@ -640,6 +657,25 @@ void sgwc_s5c_handle_create_bearer_request(
                 OGS_GTP2_CREATE_BEARER_RESPONSE_TYPE,
                 OGS_GTP2_CAUSE_MANDATORY_IE_MISSING);
         return;
+    }
+
+    /* Get the charging ID for new bearer */
+    if (req->bearer_contexts.charging_id.presence) {
+        bearer->charging_id = req->bearer_contexts.charging_id.u32;
+    } else {
+        ogs_error("No chargind id was present in S5C Create Bearer Request");
+    }
+
+    /* Get the Bearer QCI */
+    if (req->bearer_contexts.bearer_level_qos.presence) {
+        decoded = ogs_gtp2_parse_bearer_qos(&bearer_qos,
+            &req->bearer_contexts.bearer_level_qos);
+        ogs_assert(decoded ==
+            req->bearer_contexts.bearer_level_qos.len);
+
+        bearer->qci = bearer_qos.qci;
+    } else {
+        ogs_error("No bearer level qos was present in S5C Create Bearer Request");
     }
 
     far = ul_tunnel->far;

@@ -28,7 +28,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#define OGS_MAX_NUM_OF_SESS             10  /* Num of APN(Session) per UE */
+#define OGS_MAX_NUM_OF_SESS             12  /* Num of APN(Session) per UE */
 #define OGS_MAX_NUM_OF_BEARER           4   /* Num of Bearer per Session */
 #define OGS_BEARER_PER_UE               8   /* Num of Bearer per UE */
 #define OGS_MAX_NUM_OF_PACKET_BUFFER    64  /* Num of PacketBuffer per UE */
@@ -65,7 +65,7 @@ extern "C" {
     OGS_BCD_TO_BUFFER_LEN(OGS_MAX_IMSI_BCD_LEN)
 
 #define OGS_MAX_TIMEZONE_RAW_LEN        16
-#define OGS_MAX_IP_RAW_LEN              16
+#define OGS_MAX_IP_RAW_LEN              64
 
 #define OGS_MAX_IMEISV_BCD_LEN          16
 #define OGS_MAX_IMEISV_LEN              \
@@ -254,7 +254,9 @@ int ogs_sockaddr_to_ip(
         ogs_sockaddr_t *addr, ogs_sockaddr_t *addr6, ogs_ip_t *ip);
 
 char *ogs_ipv4_to_string(uint32_t addr);
+char *ogs_ipv4_to_string_stack(uint32_t addr, char *buf);
 char *ogs_ipv6addr_to_string(uint8_t *addr6);
+char *ogs_ipv6addr_to_string_stack(uint8_t *addr6, char *buf);
 char *ogs_ipv6prefix_to_string(uint8_t *addr6, uint8_t prefixlen);
 int ogs_ipv4_from_string(uint32_t *addr, char *string);
 int ogs_ipv6addr_from_string(uint8_t *addr6, char *string);
@@ -491,6 +493,9 @@ typedef struct ogs_session_s {
     char **ipv4_framed_routes;
     char **ipv6_framed_routes;
     ogs_ip_t smf_ip;
+
+    ogs_sockaddr_t  *pgw_addr;
+    ogs_sockaddr_t  *pgw_addr6;
 } ogs_session_t;
 
 int ogs_fqdn_build(char *dst, char *src, int len);

@@ -79,14 +79,6 @@ typedef struct sgwc_ue_s {
     uint8_t timezone_raw[OGS_MAX_TIMEZONE_RAW_LEN];
     int timezone_raw_len;
 
-    /* UE IP */
-    uint8_t ue_ip_raw[OGS_MAX_IP_RAW_LEN];
-    int ue_ip_raw_len;
-
-    /* PGW IP */
-    uint8_t pgw_ip_raw[OGS_MAX_IP_RAW_LEN];
-    int pgw_ip_raw_len;
-
     /* User-Location-Info */
     bool            uli_presence;
     ogs_eps_tai_t   e_tai;
@@ -120,6 +112,18 @@ typedef struct sgwc_sess_s {
     ogs_pfcp_node_t *pfcp_node;
 
     sgwc_ue_t       *sgwc_ue;
+
+    /* Timezone */
+    uint8_t timezone_raw[OGS_MAX_TIMEZONE_RAW_LEN];
+    int timezone_raw_len;
+
+    /* UE IP */
+    char ue_ipv4[OGS_ADDRSTRLEN];
+    char ue_ipv6[OGS_ADDRSTRLEN];
+
+    /* PGW IP */
+    uint8_t pgw_ip_raw[OGS_MAX_IP_RAW_LEN];
+    int pgw_ip_raw_len;
 } sgwc_sess_t;
 
 typedef struct sgwc_bearer_s {
@@ -134,6 +138,10 @@ typedef struct sgwc_bearer_s {
 
     /* Used to deactivate unused bearers */
     ogs_timer_t* timer_bearer_deactivation;
+
+    uint32_t charging_id;
+    uint8_t qci;
+    bool dedicated;
 } sgwc_bearer_t;
 
 typedef struct sgwc_tunnel_s {
@@ -168,6 +176,7 @@ sgwc_ue_t *sgwc_ue_find_by_imsi_bcd(char *imsi_bcd);
 sgwc_ue_t *sgwc_ue_find_by_teid(uint32_t teid);
 
 sgwc_ue_t *sgwc_ue_add(uint8_t *imsi, int imsi_len);
+sgwc_ue_t *sgwc_ue_cycle(sgwc_ue_t *sgwc_ue);
 int sgwc_ue_remove(sgwc_ue_t *sgwc_ue);
 void sgwc_ue_remove_all(void);
 
@@ -198,6 +207,8 @@ sgwc_bearer_t *sgwc_bearer_find_by_sess_ebi(
                                 sgwc_sess_t *sess, uint8_t ebi);
 sgwc_bearer_t *sgwc_bearer_find_by_ue_ebi(
                                 sgwc_ue_t *sgwc_ue, uint8_t ebi);
+sgwc_bearer_t *sgwc_bearer_find_by_sess_urr_id(
+                                sgwc_sess_t *sess, uint32_t urr_id);
 sgwc_bearer_t *sgwc_default_bearer_in_sess(sgwc_sess_t *sess);
 sgwc_bearer_t *sgwc_bearer_cycle(sgwc_bearer_t *bearer);
 
