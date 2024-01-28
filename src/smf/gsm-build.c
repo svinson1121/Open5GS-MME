@@ -223,7 +223,7 @@ ogs_pkbuf_t *gsm_build_pdu_session_establishment_accept(smf_sess_t *sess)
         epco_buf = ogs_calloc(OGS_MAX_EPCO_LEN, sizeof(uint8_t));
         ogs_assert(epco_buf);
         epco_len = smf_pco_build(epco_buf,
-                sess->nas.ue_epco.buffer, sess->nas.ue_epco.length);
+                sess->nas.ue_epco.buffer, sess->nas.ue_epco.length, sess->session.name);
         ogs_expect(epco_len > 0);
         if (0 == epco_len) {
             ogs_error("Failed to build PCO");

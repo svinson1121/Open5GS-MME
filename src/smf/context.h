@@ -126,6 +126,8 @@ typedef struct smf_context_s {
 
     /* Bearer deactivation timer value in seconds */
     int bearer_deactivation_timer_sec;
+
+    const char *emergency_p_cscf_ipv4;
 } smf_context_t;
 
 typedef struct smf_gtp_node_s {
@@ -536,7 +538,7 @@ smf_pf_t *smf_pf_find_by_flow(
 smf_pf_t *smf_pf_first(smf_bearer_t *bearer);
 smf_pf_t *smf_pf_next(smf_pf_t *pf);
 
-int smf_pco_build(uint8_t *pco_buf, uint8_t *buffer, int length);
+int smf_pco_build(uint8_t *pco_buf, uint8_t *buffer, int length, char *apn);
 
 void smf_qfi_pool_init(smf_sess_t *sess);
 void smf_qfi_pool_final(smf_sess_t *sess);
