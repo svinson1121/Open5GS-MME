@@ -3031,7 +3031,7 @@ sgw_ue_t *sgw_ue_add(mme_sgw_t *sgw)
 
     ogs_pool_alloc(&sgw_ue_pool, &sgw_ue);
     ogs_assert(sgw_ue);
-    memset(sgw_ue, 0, sizeof *sgw_ue);
+    memset(sgw_ue, 0, sizeof(*sgw_ue));
 
     sgw_ue->t_s11_holding = ogs_timer_add(
             ogs_app()->timer_mgr, mme_timer_s11_holding_timer_expire, sgw_ue);

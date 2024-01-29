@@ -264,7 +264,20 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
                     sgw = mme_sgw_find_by_addr(sgw_addr);
 
                     if (NULL == sgw) {
+                        ogs_debug("Looks like we haven't used this SGW (%s) yet, lets add it and connect to it", ipv4);
                         sgw = mme_sgw_add(sgw_addr);
+                        
+                        rv = ogs_gtp_connect(
+                            ogs_gtp_self()->gtpc_sock,
+                            ogs_gtp_self()->gtpc_sock6,
+                            (ogs_gtp_node_t *)sgw
+                        );
+
+                        if (OGS_OK != rv) {
+                            ogs_error("Failed to connect to new SGW with address '%s'", ipv4);
+                            mme_sgw_remove(sgw);
+                            return OGS_ERROR;
+                        }
                     }
                 } else {
                     ogs_error("Failed to set SGW address to '%s', falling back to default selection method", ipv4);
@@ -282,7 +295,7 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
         ogs_assert(sgw);
         sgw_ue = sgw_ue_add(sgw);
         ogs_assert(sgw_ue);
-        ogs_assert(sgw_ue->gnode);
+        ogs_assert(sgw_ue->gnode); /* sgw_ue->gnode is a union with the sgw_ue->sgw */
         sgw_ue_associate_mme_ue(sgw_ue, mme_ue);
     }
     ogs_assert(sgw_ue);
