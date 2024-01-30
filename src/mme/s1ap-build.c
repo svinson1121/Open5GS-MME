@@ -22,6 +22,8 @@
 #include "mme-sm.h"
 #include "s1ap-build.h"
 
+static bool bearer_has_sgw_s1u_ip(mme_bearer_t *bearer);
+
 ogs_pkbuf_t *s1ap_build_setup_rsp(void)
 {
     int i, j;
@@ -402,6 +404,26 @@ ogs_pkbuf_t *s1ap_build_initial_context_setup_request(
                         "ENB_UE_S1AP_ID[%d] MME_UE_S1AP_ID[%d]",
                         mme_ue->imsi_bcd, mme_ue->nas_eps.type,
                         enb_ue->enb_ue_s1ap_id, enb_ue->mme_ue_s1ap_id);
+                continue;
+            } else if (false == bearer_has_sgw_s1u_ip(bearer)) {
+                /* There are 2 places sgw_s1u_ip is set:
+                 *   1. mme_s11_handle_create_session_response
+                 *   2. mme_s11_handle_create_bearer_request
+                 * If this variable has not been set this bearer must
+                 * not have been correctly setup so lets skip it.
+                 * This will also prevent ogs_asn_ip_to_BIT_STRING asserts
+                 * firing due to unassigned IP addresses. Bearer must have
+                 * been created incorrectly. */
+                ogs_error("Bearer [%p] has no sgw_s1u_ip!", mme_bearer_cycle(bearer));
+                ogs_error("\tOGS_FSM_CHECK(&bearer->sm, esm_state_inactive)            : %i", OGS_FSM_CHECK(&bearer->sm, esm_state_inactive));
+                ogs_error("\tOGS_FSM_CHECK(&bearer->sm, esm_state_active)              : %i", OGS_FSM_CHECK(&bearer->sm, esm_state_active));
+                ogs_error("\tOGS_FSM_CHECK(&bearer->sm, esm_state_bearer_deactivated)  : %i", OGS_FSM_CHECK(&bearer->sm, esm_state_bearer_deactivated));
+                ogs_error("\tOGS_FSM_CHECK(&bearer->sm, esm_state_exception)           : %i", OGS_FSM_CHECK(&bearer->sm, esm_state_exception));
+                ogs_error("\tOGS_FSM_CHECK(&bearer->sm, esm_state_final)               : %i", OGS_FSM_CHECK(&bearer->sm, esm_state_final));
+                ogs_error("\tOGS_FSM_CHECK(&bearer->sm, esm_state_initial)             : %i", OGS_FSM_CHECK(&bearer->sm, esm_state_initial));
+                ogs_error("\tOGS_FSM_CHECK(&bearer->sm, esm_state_pdn_did_disconnect)  : %i", OGS_FSM_CHECK(&bearer->sm, esm_state_pdn_did_disconnect));
+                ogs_error("\tOGS_FSM_CHECK(&bearer->sm, esm_state_pdn_will_disconnect) : %i", OGS_FSM_CHECK(&bearer->sm, esm_state_pdn_will_disconnect));
+
                 continue;
             }
 
@@ -2696,4 +2718,20 @@ ogs_pkbuf_t *s1ap_build_kill_request(SBcAP_Stop_Warning_Request_t *request)
             s1ap_SerialNumber->buf[0], s1ap_SerialNumber->buf[1]);
 
     return ogs_s1ap_encode(&pdu);
+}
+
+static bool bearer_has_sgw_s1u_ip(mme_bearer_t *bearer)
+{
+    if (NULL == bearer) {
+        ogs_error("NULL bearer provided");
+        return false;
+    }
+
+    if ((0 == bearer->sgw_s1u_ip.ipv4) &&
+        (0 == bearer->sgw_s1u_ip.ipv6)) 
+    {
+        return false;
+    }
+
+    return true;
 }
