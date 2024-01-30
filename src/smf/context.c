@@ -1019,6 +1019,9 @@ int smf_context_parse_config(void)
                     if (c_bearer_deactivation_timer_sec) {
                         self.bearer_deactivation_timer_sec = atoi(c_bearer_deactivation_timer_sec);
                     }
+                } else if (!strcmp(smf_key, "emergency_p_cscf_ipv4")) {
+                    const char *emergency_p_cscf_ipv4 = ogs_yaml_iter_value(&smf_iter);
+                    self.emergency_p_cscf_ipv4 = emergency_p_cscf_ipv4;
                 } else
                     ogs_warn("unknown key `%s`", smf_key);
             }
@@ -2916,7 +2919,7 @@ static const uint8_t *ipcp_contains_option(
 #include "../version.h"
 static const char *pap_welcome = "Welcome to open5gs-smfd " OPEN5GS_VERSION;
 
-int smf_pco_build(uint8_t *pco_buf, uint8_t *buffer, int length)
+int smf_pco_build(uint8_t *pco_buf, uint8_t *buffer, int length, char *apn)
 {
     int rv;
     ogs_pco_t ue, smf;
@@ -3098,7 +3101,22 @@ int smf_pco_build(uint8_t *pco_buf, uint8_t *buffer, int length)
             }
             break;
         case OGS_PCO_ID_P_CSCF_IPV4_ADDRESS_REQUEST:
-            if (smf_self()->redis_p_cscf_ipv4_key) {
+            if ((NULL != apn) &&
+                (NULL != smf_self()->emergency_p_cscf_ipv4) &&
+                (0 == strcmp(apn, "sos")))
+            {
+                uint32_t emergency_p_cscf_addr[4] = {}; /* big enough for IPv4 and IPv6 addresses */
+
+                if (OGS_OK == ogs_ipv4_from_string(emergency_p_cscf_addr, (char*)smf_self()->emergency_p_cscf_ipv4)) {
+                    smf.ids[smf.num_of_id].id = ue.ids[i].id;
+                    smf.ids[smf.num_of_id].len = OGS_IPV4_LEN;
+                    smf.ids[smf.num_of_id].data = emergency_p_cscf_addr;
+                    smf.num_of_id++;
+                } else {
+                    ogs_error("Failed to parse the emergency P-CSCF address '%s'!", smf_self()->emergency_p_cscf_ipv4);
+                }
+            }
+            else if (smf_self()->redis_p_cscf_ipv4_key) {
                 if (redis_get_rand_p_cscf_ipv4(&p_cscf, smf_self()->redis_p_cscf_ipv4_key)) {
                     smf.ids[smf.num_of_id].id = ue.ids[i].id;
                     smf.ids[smf.num_of_id].len = OGS_IPV4_LEN;

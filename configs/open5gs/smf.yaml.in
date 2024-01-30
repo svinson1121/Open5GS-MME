@@ -464,6 +464,16 @@ sbi:
 #    enabled: true
 #    hold_time_sec: 5
 #
+# <EMERGENCY P-CSCF SELECTION>
+# 
+#  o To enable and set the P-CSCF address to be returned during an emergency 
+#    attach (apn == "sos") the 'emergency_p_cscf_ipv4' key can be used.
+#  o If this value is not set, the default P-CSCF selection method will be used.
+# 
+#  smf:
+#    emergency_p_cscf_ipv4: 1.2.3.4
+#
+#
 #  <CTF>
 #
 #  o Gy interface parameters towards OCS.
