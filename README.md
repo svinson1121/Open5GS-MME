@@ -36,7 +36,7 @@ tac-lb01.tac-hb00       IN NAPTR 102 20 "a" "x-3gpp-sgw:x-s5-gtp" ""  sgw-c.epc.
 
 
 
-PGW:
+Example DNS zones: PGW:
 ```
 $ORIGIN apn.epc.mnc435.mcc311.3gppnetwork.org.
 $TTL 1W
