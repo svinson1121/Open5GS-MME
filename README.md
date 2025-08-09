@@ -16,7 +16,7 @@ Please follow the [documentation](https://open5gs.org/open5gs/docs/) at [open5gs
 
 Example DNS zones:
 SGW:
-
+```
 $ORIGIN tac.epc.mnc435.mcc311.3gppnetwork.org.
 $TTL 1W
 @                       1D IN SOA       localhost. root.localhost. (
@@ -32,12 +32,12 @@ $TTL 1W
 
 tac-lb01.tac-hb00       IN NAPTR 102 10 "a" "x-3gpp-sgw:x-s11" ""    sgw-c.epc.mnc435.mcc311.3gppnetwork.org.
 tac-lb01.tac-hb00       IN NAPTR 102 20 "a" "x-3gpp-sgw:x-s5-gtp" ""  sgw-c.epc.mnc435.mcc311.3gppnetwork.org.
-
+```
 
 
 
 PGW:
-
+```
 $ORIGIN apn.epc.mnc435.mcc311.3gppnetwork.org.
 $TTL 1W
 @                       1D IN SOA       localhost. root.localhost. (
@@ -56,7 +56,7 @@ internet        IN NAPTR 100 999 "a" "x-3gpp-pgw:x-s5-gtp:x-s8-gtp" "" smf.epc.m
 internet        IN NAPTR 100 999 "a" "x-3ggp-sgw:x-s5-gtp:x-s8-gtp:x-s11" ""  sgw-c.epc.mnc435.mcc311.3gppnetwork.org.
 mms             IN NAPTR 100 999 "a" "x-3gpp-pgw:x-s5-gtp:x-s8-gtp" "" smf.epc.mnc435.mcc311.3gppnetwork.org.
 mms             IN NAPTR 100 999 "a" "x-3gpp-sgw:x-s5-gtp:x-s8-gtp:x-s11" ""  sgw-c.epc.mnc435.mcc311.3gppnetwork.org.
-
+```
 
 
 
