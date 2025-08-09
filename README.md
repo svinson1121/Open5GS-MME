@@ -69,6 +69,8 @@ mms             IN NAPTR 100 999 "a" "x-3gpp-sgw:x-s5-gtp:x-s8-gtp:x-s11" ""  sg
 
 * Back ported the HSS_MAP  from https://github.com/open5gs/open5gs/commit/9d83eba550bd693bd18568d60189b14161b97f06      @svinson1121
 
+#TODO:
+* add support for PGW topon / topoff selection ETSI TS 129 303 
 #Known Issues
 
 SGS:
