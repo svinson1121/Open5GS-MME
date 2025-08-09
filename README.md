@@ -4,8 +4,6 @@
 
 Please follow the [documentation](https://open5gs.org/open5gs/docs/) at [open5gs.org](https://open5gs.org/)!
 
-## Sponsors
-
 
 
 ## License
