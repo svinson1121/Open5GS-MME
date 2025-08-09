@@ -13,7 +13,7 @@ Please follow the [documentation](https://open5gs.org/open5gs/docs/) at [open5gs
 #####################################################
 
 I recommend running only the MME from this code. Use the SGW C/U and PGW C/U from the main Open5GS project or eUPF.
-
+* Fixed random code issue so it would build on:  Ubuntu 24.10
 * Change SGW DNS selection to use the correct 3GPP format: tac-lb(NN).tac-hb(NN).tac.epc.mnc(NN(N)).mcc(NNN).3gppnetwork.org @svinson1121
   
 
