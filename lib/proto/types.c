@@ -23,6 +23,10 @@
 #define PLMN_ID_DIGIT2(x) (((x) / 10) % 10)
 #define PLMN_ID_DIGIT3(x) ((x) % 10)
 
+#ifndef FQDN_3GPPNETWORK_ORG
+#define FQDN_3GPPNETWORK_ORG ".3gppnetwork.org"
+#endif
+
 uint32_t ogs_plmn_id_hexdump(void *plmn_id)
 {
     uint32_t hex;
@@ -123,6 +127,17 @@ char *ogs_plmn_id_to_string(ogs_plmn_id_t *plmn_id, char *buf)
 
     return buf;
 }
+
+char *ogs_epc_domain_from_plmn_id(ogs_plmn_id_t *plmn_id)
+{
+    ogs_assert(plmn_id);
+    return ogs_msprintf("epc.mnc%03d.mcc%03d%s",
+            ogs_plmn_id_mnc(plmn_id),
+            ogs_plmn_id_mcc(plmn_id),
+            FQDN_3GPPNETWORK_ORG);
+}
+
+
 
 uint32_t ogs_amf_id_hexdump(ogs_amf_id_t *amf_id)
 {

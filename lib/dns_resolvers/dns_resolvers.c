@@ -32,6 +32,7 @@ enum { MAX_ANSWER_BYTES = 1024 };
 
 
 static bool build_domain_name(ResolverContext * const context);
+static bool build_sgw_domain_name(ResolverContext * const context);
 static naptr_resource_record * filter_nrrs(ResolverContext const * const context, naptr_resource_record *nrrs);
 static bool should_remove(ResolverContext const * const context, naptr_resource_record *nrr);
 static void transform_domain_name(naptr_resource_record *nrr, char * dname);
@@ -84,9 +85,54 @@ bool resolve_naptr(ResolverContext * const context, char *buf, size_t buf_sz) {
     return resolved;
 }
 
+
+
+bool resolve_sgw_naptr(ResolverContext * const context, char *buf, size_t buf_sz) {
+    bool resolved = false;
+    naptr_resource_record *nrr = NULL;
+    naptr_resource_record *nrr_list = NULL;
+
+    if ((NULL == context) || (NULL == buf)) return false;
+
+    /* Build SGW-specific domain name */
+    build_sgw_domain_name(context);
+    ogs_debug("Built SGW domain name : '%s'", context->_domain_name);
+
+    /* Get all NRRs */
+    nrr_list = naptr_query(context->_domain_name);
+    if (NULL == nrr_list) return false;
+    ogs_debug("NAPTR query returned %i results", naptr_resource_record_list_count(nrr_list));
+
+    /* Remove all the NRRs that don't provide the desired service */
+    nrr_list = filter_nrrs(context, nrr_list);
+    ogs_debug("NAPTR list count after filter %i", naptr_resource_record_list_count(nrr_list));
+
+    /* Sort the NRRs so that we can resolve them in order of priority */
+    nrr_list = naptr_list_head(nrr_list);
+    nrr = naptr_sort(&nrr_list);
+
+    while (nrr != NULL) {
+        transform_domain_name(nrr, context->_domain_name);
+        int num_ips = type_ip_query(nrr->flag, context->_domain_name, buf, buf_sz);
+
+        if (0 < num_ips) {
+            ogs_debug("SGW resolve successful, IP is '%s'", buf);
+            resolved = true;
+            break;
+        }
+
+        nrr = nrr->next;
+    }
+
+    naptr_free_resource_record_list(nrr_list);
+
+    return resolved;
+}
+
+
 static bool build_domain_name(ResolverContext * const context) {
     int chars_written = 0;
-    bool build_success = false;
+    //bool build_success = false;
 
     if (NULL == context) return false;
 
@@ -112,12 +158,37 @@ static bool build_domain_name(ResolverContext * const context) {
         );
     }
 
-    if (chars_written < DNS_RESOLVERS_MAX_DOMAIN_NAME_STR) {
-        build_success = true;
-    }
+    
+	if (chars_written < 0 || chars_written >= DNS_RESOLVERS_MAX_DOMAIN_NAME_STR) {
+    	// handle error or truncation
+   	 return false;
+	}
 
-    return build_success;
+	
+      return true;
 }
+
+static bool build_sgw_domain_name(ResolverContext * const context) {
+    int chars_written;
+
+    if (context == NULL) return false;
+
+    chars_written = snprintf(
+        context->_domain_name,
+        DNS_RESOLVERS_MAX_DOMAIN_NAME_STR,
+        "tac-lb%02x.tac-hb%02x.tac.epc.mnc%s.mcc%s.%s",
+        context->tac_low,
+        context->tac_high,
+        context->mnc,
+        context->mcc,
+        context->domain_suffix
+    );
+
+    return (chars_written < DNS_RESOLVERS_MAX_DOMAIN_NAME_STR);
+}
+
+
+
 
 /**
  * Cases:
@@ -147,17 +218,25 @@ static naptr_resource_record * filter_nrrs(ResolverContext const * const context
     return prev;
 }
 
-static bool has_appropriate_services(ResolverContext const * const context, naptr_resource_record *nrr) {
+
+static bool has_appropriate_services(const ResolverContext * const context, naptr_resource_record *nrr) {
     bool has_appropriate_services = false;
     enum { DESIRED_STR_LEN = 128 };
     char desired_target_string[DESIRED_STR_LEN] = "";
     char desired_service_string[DESIRED_STR_LEN] = "";
 
-    if ((NULL == context) || (NULL == nrr)) return NULL;
+    if ((NULL == context) || (NULL == nrr)) return false;
 
-    /* Build our desired services strings */
+    /* Build our desired target string */
     snprintf(desired_target_string, DESIRED_STR_LEN, "x-3gpp-%s", context->target);
-    snprintf(desired_service_string, DESIRED_STR_LEN, "x-%s-%s", context->interface, context->protocol);
+
+    /* Build our desired service string */
+    if (context->protocol[0] == '\0') {
+        // Protocol not set, omit from desired service string
+        snprintf(desired_service_string, DESIRED_STR_LEN, "x-%s", context->interface);
+    } else {
+        snprintf(desired_service_string, DESIRED_STR_LEN, "x-%s-%s", context->interface, context->protocol);
+    }
 
     ogs_debug("Testing for appropriate service");
     ogs_debug("Interface string       : '%s'", context->interface);
@@ -173,6 +252,8 @@ static bool has_appropriate_services(ResolverContext const * const context, napt
 
     return has_appropriate_services;
 }
+
+
 
 static bool has_replace_has_no_regex(ResolverContext const * const context, naptr_resource_record *nrr) {
     bool has_replace_has_no_regex = false;
@@ -295,11 +376,13 @@ static void transform_domain_name(naptr_resource_record *nrr, char * dname) {
 
         if (1 == reg_replace_res) {
             strncpy(dname, temp, DNS_RESOLVERS_MAX_DOMAIN_NAME_STR - 1);
+	    dname[DNS_RESOLVERS_MAX_DOMAIN_NAME_STR - 1] = '\0';
         } else {
             ogs_error("Failed to preform regex replace!");
         }
     } else if (0 != strcmp(nrr->replacement, ".")) {
         strncpy(dname, nrr->replacement, DNS_RESOLVERS_MAX_DOMAIN_NAME_STR - 1);
+	dname[DNS_RESOLVERS_MAX_DOMAIN_NAME_STR - 1] = '\0';
     } else {
         /* No changes made to domain name */
     }

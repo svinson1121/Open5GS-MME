@@ -976,6 +976,7 @@ int smf_context_parse_config(void)
                         if (!strcmp(redis_server_config_key, "addr")) {
                             const char *redis_addr = ogs_yaml_iter_value(&redis_iter);
                             strncpy(self.redis_server_config.address, redis_addr, 16);
+			    self.redis_server_config.address[15] = '\0';
                         } else if (!strcmp(redis_server_config_key, "port")) {
                             const char *redis_port = ogs_yaml_iter_value(&redis_iter);
 

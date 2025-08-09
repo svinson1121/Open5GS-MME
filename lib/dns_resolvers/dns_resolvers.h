@@ -24,13 +24,13 @@
 
 
 enum { DNS_RESOLVERS_MAX_TARGET_STR = 8,
-       DNS_RESOLVERS_MAX_INTERFACE_STR = 8,
-       DNS_RESOLVERS_MAX_PROTOCOL_STR = 8,
+       DNS_RESOLVERS_MAX_INTERFACE_STR = 9,
+       DNS_RESOLVERS_MAX_PROTOCOL_STR = 9,
        DNS_RESOLVERS_MAX_APN_STR = 32,
        DNS_RESOLVERS_MAX_MNC_STR = 8,
        DNS_RESOLVERS_MAX_MCC_STR = 8,
-       DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR = 64,
-       DNS_RESOLVERS_MAX_DOMAIN_NAME_STR = 128, };
+       DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR = 128,
+       DNS_RESOLVERS_MAX_DOMAIN_NAME_STR = 256, };
 
 
 typedef struct {
@@ -41,7 +41,8 @@ typedef struct {
     char mnc[DNS_RESOLVERS_MAX_MNC_STR];
     char mcc[DNS_RESOLVERS_MAX_MCC_STR];
     char domain_suffix[DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR];
-
+    uint8_t tac_low;
+    uint8_t tac_high;
     /* Used internally */
     char _domain_name[DNS_RESOLVERS_MAX_DOMAIN_NAME_STR];
 } ResolverContext;
@@ -71,5 +72,5 @@ typedef struct {
  *   change buf.
  */
 bool resolve_naptr(ResolverContext * const context, char *buf, size_t buf_sz);
-
+bool resolve_sgw_naptr(ResolverContext * const context, char *buf, size_t buf_sz);
 #endif /* DNS_RESOLVERS_H */

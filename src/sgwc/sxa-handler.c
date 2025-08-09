@@ -1774,8 +1774,10 @@ static UsageLoggerData build_usage_logger_data(sgwc_bearer_t *bearer, char const
 
     usageLoggerData.charging_id = bearer->charging_id;
     strncpy(usageLoggerData.event, event, EVENT_STR_MAX_LEN);
+    usageLoggerData.event[EVENT_STR_MAX_LEN - 1] = '\0';
     strncpy(usageLoggerData.imsi, sgwc_ue->imsi_bcd, IMSI_STR_MAX_LEN);
     strncpy(usageLoggerData.apn, sess->session.name, APN_STR_MAX_LEN);
+    usageLoggerData.apn[APN_STR_MAX_LEN - 1] = '\0';
     usageLoggerData.qci = bearer->qci;
     usageLoggerData.octets_in = octets_in;
     usageLoggerData.octets_out = octets_out;

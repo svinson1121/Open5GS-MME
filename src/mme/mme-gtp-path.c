@@ -227,78 +227,100 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
     ogs_assert(session);
     sgw_ue = sgw_ue_cycle(mme_ue->sgw_ue);
 
-    /* Pick SGW if one has not been chosen */
-    if (NULL == sgw_ue) {
-        mme_sgw_t *sgw = NULL;
+	
 
-        if (0 == strcmp(session->name, "sos")) {
-            /* If APN is SOS then skip DNS lookup and assign SGW/PGW from local config */
-            sgw = select_random_sgw();
-        } else if (imsi_is_roaming(&mme_ue->nas_mobile_identity_imsi)) {
-            sgw = select_random_sgw_roaming();
-        } else if (mme_self()->dns_target_sgw) {
-            char ipv4[INET_ADDRSTRLEN] = "";
-            ResolverContext context = {};
-            /* We do not include the APN for SGW lookups */
-            snprintf(context.mnc, DNS_RESOLVERS_MAX_MNC_STR, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
-            snprintf(context.mcc, DNS_RESOLVERS_MAX_MCC_STR, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
-            strncpy(context.target, "sgw", DNS_RESOLVERS_MAX_TARGET_STR);
-            strncpy(context.interface, "s11", DNS_RESOLVERS_MAX_INTERFACE_STR);
-            strncpy(context.protocol, "gtp", DNS_RESOLVERS_MAX_PROTOCOL_STR);
-            strncpy(context.domain_suffix, mme_self()->dns_base_domain, DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR);
+    /* Select a  SGW if one has not been chosen */
+if (NULL == sgw_ue) {
+    mme_sgw_t *sgw = NULL;
+    int rv;
 
-            if (true == resolve_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
-                ogs_sockaddr_t *sgw_addr = NULL;
+    if (0 == strcmp(session->name, "sos")) {
+        /* If APN is SOS then skip DNS lookup and assign SGW/PGW from local config */
+        sgw = select_random_sgw();
+    } else if (imsi_is_roaming(&mme_ue->nas_mobile_identity_imsi)) {
+        sgw = select_random_sgw_roaming();
+    } else if (mme_self()->dns_target_sgw) {
+        char ipv4[INET_ADDRSTRLEN] = "";
+        ResolverContext context = {};
 
-                ogs_info("NAPTR resolve success, SGW address is '%s'", ipv4);
+        snprintf(context.mnc, DNS_RESOLVERS_MAX_MNC_STR, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
+        snprintf(context.mcc, DNS_RESOLVERS_MAX_MCC_STR, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
 
-                ogs_addaddrinfo(
-                    &sgw_addr,
-                    AF_INET,
-                    ipv4,
-                    ogs_gtp_self()->gtpc_port,
-                    0
-                );
+        /* Split TAC into high and low bytes */
+        uint16_t tac = mme_ue->tai.tac;
+        uint8_t tac_high = (tac >> 8) & 0xFF;
+        uint8_t tac_low = tac & 0xFF;
 
-                if (NULL != sgw_addr) {
-                    sgw = mme_sgw_find_by_addr(sgw_addr);
+        strncpy(context.domain_suffix, mme_self()->dns_base_domain, DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR - 1);
+        context.domain_suffix[DNS_RESOLVERS_MAX_DOMAIN_SUFFIX_STR - 1] = '\0';
 
-                    if (NULL == sgw) {
-                        ogs_debug("Looks like we haven't used this SGW (%s) yet, lets add it and connect to it", ipv4);
-                        sgw = mme_sgw_add(sgw_addr);
-                        
-                        rv = ogs_gtp_connect(
-                            ogs_gtp_self()->gtpc_sock,
-                            ogs_gtp_self()->gtpc_sock6,
-                            (ogs_gtp_node_t *)sgw
-                        );
+	context.tac_low  = tac_low;
+	context.tac_high = tac_high;
+	
+	strncpy(context.target, "sgw", DNS_RESOLVERS_MAX_TARGET_STR);
+	context.target[DNS_RESOLVERS_MAX_TARGET_STR - 1] = '\0';
 
-                        if (OGS_OK != rv) {
-                            ogs_error("Failed to connect to new SGW with address '%s'", ipv4);
-                            mme_sgw_remove(sgw);
-                            return OGS_ERROR;
-                        }
+	/* we select the S11 interface i think this is correct */
+	strncpy(context.interface, "s11", DNS_RESOLVERS_MAX_INTERFACE_STR);
+	context.interface[DNS_RESOLVERS_MAX_INTERFACE_STR - 1] = '\0';
+
+	/* set the protocol type to NULL for the SGW selection */
+	context.protocol[0] = '\0';
+
+        if (true == resolve_sgw_naptr(&context, ipv4, INET_ADDRSTRLEN)) {
+            ogs_sockaddr_t *sgw_addr = NULL;
+
+            ogs_info("NAPTR resolve success, SGW address is '%s'", ipv4);
+
+            ogs_addaddrinfo(
+                &sgw_addr,
+                AF_INET,
+                ipv4,
+                ogs_gtp_self()->gtpc_port,
+                0
+            );
+
+            if (NULL != sgw_addr) {
+                sgw = mme_sgw_find_by_addr(sgw_addr);
+
+                if (NULL == sgw) {
+                    ogs_debug("Looks like we haven't used this SGW (%s) yet, lets add it and connect to it", ipv4);
+                    sgw = mme_sgw_add(sgw_addr);
+
+                    rv = ogs_gtp_connect(
+                        ogs_gtp_self()->gtpc_sock,
+                        ogs_gtp_self()->gtpc_sock6,
+                        (ogs_gtp_node_t *)sgw
+                    );
+
+                    if (OGS_OK != rv) {
+                        ogs_error("Failed to connect to new SGW with address '%s'", ipv4);
+                        mme_sgw_remove(sgw);
+                        return OGS_ERROR;
                     }
-                } else {
-                    ogs_error("Failed to set SGW address to '%s', falling back to default selection method", ipv4);
                 }
+            } else {
+                ogs_error("Failed to set SGW address to '%s', falling back to default selection method", ipv4);
             }
-            else {
-                ogs_error("Failed to resolve dns and update SGW IP in CSR, falling back to default selection method");
-            }
+        } else {
+            ogs_error("Failed to resolve dns and update SGW IP in CSR, falling back to default selection method");
         }
-
-        if (NULL == sgw) {
-            sgw = select_random_sgw();
-        }
-
-        ogs_assert(sgw);
-        sgw_ue = sgw_ue_add(sgw);
-        ogs_assert(sgw_ue);
-        ogs_assert(sgw_ue->gnode); /* sgw_ue->gnode is a union with the sgw_ue->sgw */
-        sgw_ue_associate_mme_ue(sgw_ue, mme_ue);
     }
+
+    if (NULL == sgw) {
+        sgw = select_random_sgw();
+    }
+
+    ogs_assert(sgw);
+    sgw_ue = sgw_ue_add(sgw);
     ogs_assert(sgw_ue);
+    ogs_assert(sgw_ue->gnode); /* sgw_ue->gnode is a union with the sgw_ue->sgw */
+    sgw_ue_associate_mme_ue(sgw_ue, mme_ue);
+}
+ogs_assert(sgw_ue);
+
+
+
 
     /* If this is a SOS APN the we want to set the address in the session to a local PGW */
     if (0 == strcmp(session->name, "sos")) {
@@ -314,7 +336,7 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
 
         if (mme_self()->dns_target_pgw) {
             bool resolved_dns = false;
-            enum { MAX_MCC_MNC_STR = 4 };
+            enum { MAX_MCC_MNC_STR = 6 };
             char ipv4[INET_ADDRSTRLEN] = "";
             ResolverContext context = {};
             char mme_mcc[MAX_MCC_MNC_STR] = "";
@@ -324,9 +346,10 @@ int mme_gtp_send_create_session_request(mme_sess_t *sess, int create_action)
             char imsi_mnc_3[MAX_MCC_MNC_STR] = "000";
             
             /* Load MCC and MNC from config and format them */
-            snprintf(mme_mcc, MAX_MCC_MNC_STR, "%03u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
-            snprintf(mme_mnc, MAX_MCC_MNC_STR, "%03u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
-            strncpy(context.apn, sess->session->name, DNS_RESOLVERS_MAX_APN_STR);
+            snprintf(mme_mcc, MAX_MCC_MNC_STR, "%u", ogs_plmn_id_mcc(&mme_ue->tai.plmn_id));
+            snprintf(mme_mnc, MAX_MCC_MNC_STR, "%u", ogs_plmn_id_mnc(&mme_ue->tai.plmn_id));
+	    strncpy(context.apn, sess->session->name, DNS_RESOLVERS_MAX_APN_STR - 1);
+		context.apn[DNS_RESOLVERS_MAX_APN_STR - 1] = '\0';
             strncpy(context.target, "pgw", DNS_RESOLVERS_MAX_TARGET_STR);
             strncpy(context.protocol, "gtp", DNS_RESOLVERS_MAX_PROTOCOL_STR);
             /* Load our domain suffix from the config */

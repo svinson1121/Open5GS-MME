@@ -155,8 +155,8 @@ int sgsap_send_detach_indication(mme_ue_t *mme_ue)
     int rv;
     ogs_pkbuf_t *pkbuf = NULL;
     ogs_assert(mme_ue);
-
-    if (0 != mme_ue->imsi_bcd) {
+    
+    if (mme_ue->imsi_bcd[0] != '\0') {
         mme_metrics_ue_connected_clear(mme_ue->imsi_bcd);
     }
 

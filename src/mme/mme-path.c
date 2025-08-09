@@ -32,7 +32,7 @@ void mme_send_delete_session_or_detach(mme_ue_t *mme_ue)
 
     xact_count = mme_ue_xact_count(mme_ue, OGS_GTP_LOCAL_ORIGINATOR);
 
-    if (mme_ue->imsi_bcd) {
+    if (mme_ue->imsi_bcd[0] != '\0') {
         mme_metrics_ue_connected_clear(mme_ue->imsi_bcd);
     }
 

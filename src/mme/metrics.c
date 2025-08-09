@@ -37,15 +37,18 @@ static int mme_metrics_init_inst(ogs_metrics_inst_t **inst, ogs_metrics_spec_t *
     return OGS_OK;
 }
 
+
 static int mme_metrics_free_inst(ogs_metrics_inst_t **inst,
         unsigned int len)
 {
     unsigned int i;
-    for (i = 0; i < len; i++)
+    for (i = 0; i < len; i++) {
         ogs_metrics_inst_free(inst[i]);
-    memset(inst, 0, sizeof(inst[0]) * len);
+        inst[i] = NULL;  // Clear pointer after free
+    }
     return OGS_OK;
 }
+
 
 static int mme_metrics_init_spec(ogs_metrics_context_t *ctx,
         ogs_metrics_spec_t **dst, mme_metrics_spec_def_t *src, unsigned int len)

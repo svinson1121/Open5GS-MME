@@ -279,8 +279,8 @@ int emm_handle_attach_complete(
     } else {
         rv = send_to_downlink_default(mme_ue);
     }
-
-    if (mme_ue->imsi_bcd) {
+   
+    if (mme_ue->imsi_bcd[0] != '\0') {
         mme_metrics_ue_connected_add(mme_ue->imsi_bcd);
     }
 
