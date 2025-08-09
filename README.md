@@ -58,11 +58,8 @@ $TTL 1W
                         1D IN NS        core-ns2.mnc435.mcc311.3gppnetwork.org.
 
 ims             IN NAPTR 100 999 "a" "x-3gpp-pgw:x-s5-gtp:x-s8-gtp" "" smf.epc.mnc435.mcc311.3gppnetwork.org.
-ims             IN NAPTR 100 999 "a" "x-3gpp-sgw:x-s5-gtp:x-s8-gtp:x-s11" ""  sgw-c.epc.mnc435.mcc311.3gppnetwork.org.
 internet        IN NAPTR 100 999 "a" "x-3gpp-pgw:x-s5-gtp:x-s8-gtp" "" smf.epc.mnc435.mcc311.3gppnetwork.org.
-internet        IN NAPTR 100 999 "a" "x-3ggp-sgw:x-s5-gtp:x-s8-gtp:x-s11" ""  sgw-c.epc.mnc435.mcc311.3gppnetwork.org.
 mms             IN NAPTR 100 999 "a" "x-3gpp-pgw:x-s5-gtp:x-s8-gtp" "" smf.epc.mnc435.mcc311.3gppnetwork.org.
-mms             IN NAPTR 100 999 "a" "x-3gpp-sgw:x-s5-gtp:x-s8-gtp:x-s11" ""  sgw-c.epc.mnc435.mcc311.3gppnetwork.org.
 ```
 
 
