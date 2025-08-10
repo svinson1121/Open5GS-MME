@@ -66,13 +66,14 @@ mms             IN NAPTR 100 999 "a" "x-3gpp-pgw:x-s5-gtp:x-s8-gtp" "" smf.epc.m
 
 * Back ported the HSS_MAP  from https://github.com/open5gs/open5gs/commit/9d83eba550bd693bd18568d60189b14161b97f06      @svinson1121
 
+* added SGs NAM patch https://github.com/open5gs/open5gs/commit/390a9dd6375858abfa93ff511d389d2bc41c4eca
+
+
 #TODO:
 * add support for PGW topon / topoff selection ETSI TS 129 303
   
 #Known Issues
 
 SGS:
-
-SGs is not disabled even when the NAM is set to PS only. If the MSC does not have a valid account for the UE but the HSS does, the 4G location update is rejected. This issue was addressed in a PR; I will try to backport the fix.
 
 If the MSC disconnects from the MME, it causes an MME crash. I believe there is a PR addressing this, and I will try to apply it.
