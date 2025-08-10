@@ -162,7 +162,10 @@ static int epoll_remove(ogs_poll_t *poll)
     ogs_assert(context);
 
     map = ogs_hash_get(context->map_hash, &poll->fd, sizeof(poll->fd));
-    ogs_assert(map);
+    if (!map) {
+        ogs_warn("epoll_remove: fd %d not found in map_hash", poll->fd);
+        return OGS_OK; // No-op if it wasn't added
+    }
 
     if (poll->when & OGS_POLLIN)
         map->read = NULL;
@@ -197,6 +200,7 @@ static int epoll_remove(ogs_poll_t *poll)
 
     return OGS_OK;
 }
+
 
 static int epoll_process(ogs_pollset_t *pollset, ogs_time_t timeout)
 {

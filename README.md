@@ -68,12 +68,10 @@ mms             IN NAPTR 100 999 "a" "x-3gpp-pgw:x-s5-gtp:x-s8-gtp" "" smf.epc.m
 
 * added SGs NAM patch https://github.com/open5gs/open5gs/commit/390a9dd6375858abfa93ff511d389d2bc41c4eca
 
+* Fixed MME (SGs-AP) crash when the MSC connection was lost or shutdown. MME will now try to Reconnect to the MSC.
 
 #TODO:
 * add support for PGW topon / topoff selection ETSI TS 129 303
   
 #Known Issues
 
-SGS:
-
-If the MSC disconnects from the MME, it causes an MME crash. I believe there is a PR addressing this, and I will try to apply it.
