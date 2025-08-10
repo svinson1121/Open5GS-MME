@@ -153,6 +153,7 @@ void mme_context_final(void)
     mme_pgw_remove_all();
     mme_csmap_remove_all();
     mme_vlr_remove_all();
+    mme_hssmap_remove_all();
 
     ogs_assert(self.enb_addr_hash);
     ogs_hash_destroy(self.enb_addr_hash);
@@ -180,6 +181,7 @@ void mme_context_final(void)
     ogs_pool_final(&mme_pgw_pool);
     ogs_pool_final(&mme_csmap_pool);
     ogs_pool_final(&mme_vlr_pool);
+    ogs_pool_final(&mme_hssmap_pool);
 
     context_initialized = 0;
 }
