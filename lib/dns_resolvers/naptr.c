@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <time.h>
 #include "ogs-dns-resolvers-logging.h"
 
 
@@ -39,6 +40,79 @@ static bool parse_naptr_resource_record(const unsigned char * buf, uint16_t buf_
 static void get_regex_pattern_replace(char * const regex_str, char * const regex_pattern, size_t max_regex_pattern_sz, char * const regex_replace, size_t max_regex_replace_sz);
 static inline int naptr_greater(naptr_resource_record *na, naptr_resource_record *nb);
 static void _naptr_free_resource_record_list(naptr_resource_record * head);
+
+// Helper: Convert linked list to array
+naptr_resource_record ** naptr_list_to_array(naptr_resource_record *head, int *out_count) {
+    if (!head || !out_count) return NULL;
+
+    // Count nodes
+    int count = 0;
+    naptr_resource_record *cur = naptr_list_head(head);
+    while (cur) {
+        count++;
+        cur = cur->next;
+    }
+
+    if (count == 0) {
+        *out_count = 0;
+        return NULL;
+    }
+
+    // Allocate array
+    naptr_resource_record **array = malloc(sizeof(naptr_resource_record*) * count);
+    if (!array) {
+        *out_count = 0;
+        return NULL;
+    }
+
+    // Fill array
+    cur = naptr_list_head(head);
+    int i;
+    for (i = 0; i < count; i++) {
+        array[i] = cur;
+        cur = cur->next;
+    }
+
+    *out_count = count;
+    return array;
+}
+
+
+naptr_resource_record * naptr_random_select(naptr_resource_record **array, int count) {
+    if (!array || count <= 0) return NULL;
+
+    static int seeded = 0;
+    if (!seeded) {
+        srand((unsigned)time(NULL));
+        seeded = 1;
+    }
+
+    int best_order = array[0]->order;
+    int same_order_count = 0;
+
+    // Count how many have the same best order
+        int i;
+        for (i = 0; i < count; i++) {
+        if (array[i]->order == best_order) {
+            same_order_count++;
+        } else {
+            break; // sorted, so stop counting
+        }
+    }
+
+    if (same_order_count == 0) return NULL;  // defensive, should not happen
+
+    int idx = rand() % same_order_count;
+
+    if (idx >= same_order_count || idx >= count) {
+        ogs_debug("naptr_random_select: generated invalid index %d", idx);
+        return NULL;
+    }
+
+    ogs_debug("Randomly selected NAPTR index: %d, replacement: %s", idx, array[idx]->replacement);
+    return array[idx];
+}
+
 
 naptr_resource_record * naptr_query(const char* dname) {
     int count;
@@ -304,23 +378,22 @@ static void get_regex_pattern_replace(char * const regex_str, char * const regex
  * greater that NAPTR record.  An invalid NAPTR record is greater than a 
  * valid one.  Valid NAPTR records are compared based on their
  * (order,preference).
- */
-static inline int naptr_greater(naptr_resource_record *na, naptr_resource_record *nb) {
-	if (NULL == na) {
-        return 1;
-    }
-	if (NULL == nb) {
-        return 0;
-    }
+ 
+*/
 
-    if (na->preference > nb->preference) {
+static inline int naptr_greater(naptr_resource_record *na, naptr_resource_record *nb) {
+    if (NULL == na) return 1;
+    if (NULL == nb) return 0;
+
+    if (na->order > nb->order) {
         return 1;
-    } else if (na->preference == nb->preference) {
-        return na->order > nb->order;
+    } else if (na->order == nb->order) {
+        return na->preference > nb->preference;
     }
 
     return 0;
 }
+
 
 static void _naptr_free_resource_record_list(naptr_resource_record * head) {
     if (NULL != head) {

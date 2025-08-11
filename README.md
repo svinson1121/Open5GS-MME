@@ -70,8 +70,11 @@ mms             IN NAPTR 100 999 "a" "x-3gpp-pgw:x-s5-gtp:x-s8-gtp" "" smf.epc.m
 
 * Fixed MME (SGs-AP) crash when the MSC connection was lost or shutdown. MME will now try to Reconnect to the MSC.
 
+* Implemented random selection among multiple SGW and PGW NAPTR records to enable load balancing.
+
+
 #TODO:
-* add support for PGW topon / topoff selection ETSI TS 129 303
+* add support for topon / topoff  in the SGW selection  logic  ->  ETSI TS 129 303
   
 #Known Issues
 

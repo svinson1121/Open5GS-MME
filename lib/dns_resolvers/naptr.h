@@ -48,6 +48,10 @@ naptr_resource_record * naptr_list_head(naptr_resource_record * nrr);
 
 naptr_resource_record * naptr_remove_resource_record(naptr_resource_record * nrr);
 
+naptr_resource_record ** naptr_list_to_array(naptr_resource_record *head, int *out_count);
+
+naptr_resource_record * naptr_random_select(naptr_resource_record **array, int count);
+
 void naptr_free_resource_record_list(naptr_resource_record * nrr);
 
 int naptr_resource_record_list_count(naptr_resource_record * nrr);

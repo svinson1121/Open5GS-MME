@@ -42,8 +42,10 @@ static void debug_print_nrr(naptr_resource_record *nrr);
 
 bool resolve_naptr(ResolverContext * const context, char *buf, size_t buf_sz) {
     bool resolved = false;
-    naptr_resource_record *nrr = NULL;
     naptr_resource_record *nrr_list = NULL;
+    naptr_resource_record **nrr_array = NULL;
+    int nrr_count = 0;
+    naptr_resource_record *nrr_selected = NULL;
 
     if ((NULL == context) || (NULL == buf)) return false;
 
@@ -62,24 +64,33 @@ bool resolve_naptr(ResolverContext * const context, char *buf, size_t buf_sz) {
 
     /* Sort the NRRs so that we can resolve them in order of priority */
     nrr_list = naptr_list_head(nrr_list);
-    nrr = naptr_sort(&nrr_list);
+    nrr_list = naptr_sort(&nrr_list);
 
-    while (nrr != NULL) {
-        /* Update domain name */
-        transform_domain_name(nrr, context->_domain_name);
-
-        /* Go through the NRRs until we get an IP */
-        int num_ips = type_ip_query(nrr->flag, context->_domain_name, buf, buf_sz);
-
-        if (0 < num_ips) {
-            ogs_debug("Resolve successful, IP is '%s'", buf);
-            resolved = true;
-            break;
-        }
-
-        nrr = nrr->next;
+    /* Convert linked list to array */
+    nrr_array = naptr_list_to_array(nrr_list, &nrr_count);
+    if (nrr_array == NULL || nrr_count == 0) {
+        naptr_free_resource_record_list(nrr_list);
+        return false;
     }
 
+    /* Pick a random record among the best order */
+    nrr_selected = naptr_random_select(nrr_array, nrr_count);
+
+    if (nrr_selected != NULL) {
+        /* Update domain name */
+        transform_domain_name(nrr_selected, context->_domain_name);
+
+        /* Try to resolve IP for the selected record */
+        int num_ips = type_ip_query(nrr_selected->flag, context->_domain_name, buf, buf_sz);
+
+        if (num_ips > 0) {
+            ogs_debug("Resolve successful, IP is '%s'", buf);
+            resolved = true;
+        }
+    }
+
+    /* Cleanup */
+    free(nrr_array);
     naptr_free_resource_record_list(nrr_list);
 
     return resolved;
@@ -89,45 +100,49 @@ bool resolve_naptr(ResolverContext * const context, char *buf, size_t buf_sz) {
 
 bool resolve_sgw_naptr(ResolverContext * const context, char *buf, size_t buf_sz) {
     bool resolved = false;
-    naptr_resource_record *nrr = NULL;
     naptr_resource_record *nrr_list = NULL;
+    naptr_resource_record **nrr_array = NULL;
+    int nrr_count = 0;
+    naptr_resource_record *selected_nrr = NULL;
 
     if ((NULL == context) || (NULL == buf)) return false;
 
-    /* Build SGW-specific domain name */
     build_sgw_domain_name(context);
     ogs_debug("Built SGW domain name : '%s'", context->_domain_name);
 
-    /* Get all NRRs */
     nrr_list = naptr_query(context->_domain_name);
     if (NULL == nrr_list) return false;
+
     ogs_debug("NAPTR query returned %i results", naptr_resource_record_list_count(nrr_list));
 
-    /* Remove all the NRRs that don't provide the desired service */
     nrr_list = filter_nrrs(context, nrr_list);
     ogs_debug("NAPTR list count after filter %i", naptr_resource_record_list_count(nrr_list));
 
-    /* Sort the NRRs so that we can resolve them in order of priority */
-    nrr_list = naptr_list_head(nrr_list);
-    nrr = naptr_sort(&nrr_list);
+    // Convert filtered list to array for random selection
+    nrr_array = naptr_list_to_array(nrr_list, &nrr_count);
 
-    while (nrr != NULL) {
-        transform_domain_name(nrr, context->_domain_name);
-        int num_ips = type_ip_query(nrr->flag, context->_domain_name, buf, buf_sz);
+    if (nrr_array != NULL && nrr_count > 0) {
+        selected_nrr = naptr_random_select(nrr_array, nrr_count);
 
-        if (0 < num_ips) {
-            ogs_debug("SGW resolve successful, IP is '%s'", buf);
-            resolved = true;
-            break;
+        if (selected_nrr != NULL) {
+            transform_domain_name(selected_nrr, context->_domain_name);
+
+            int num_ips = type_ip_query(selected_nrr->flag, context->_domain_name, buf, buf_sz);
+
+            if (num_ips > 0) {
+                ogs_debug("SGW resolve successful, IP is '%s'", buf);
+                resolved = true;
+            }
         }
 
-        nrr = nrr->next;
+        free(nrr_array);  // free the array container, not the records themselves
     }
 
     naptr_free_resource_record_list(nrr_list);
 
     return resolved;
 }
+
 
 
 static bool build_domain_name(ResolverContext * const context) {
