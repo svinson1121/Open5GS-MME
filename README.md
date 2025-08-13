@@ -72,6 +72,7 @@ mms             IN NAPTR 100 999 "a" "x-3gpp-pgw:x-s5-gtp:x-s8-gtp" "" smf.epc.m
 
 * Implemented random selection among multiple SGW and PGW NAPTR records to enable load balancing.
 
+* Created tac2natpr.py to calculate the NAPTR hostname for SGW DNS records from the TAC (just run tac2natpr.py  , enter the TAC and it will return the hostname section of the record)
 
 #TODO:
 * add support for topon / topoff  in the SGW selection  logic  ->  ETSI TS 129 303
