@@ -206,28 +206,10 @@ ogs_pkbuf_t *mme_s11_build_create_session_request(
 
         req->access_point_name.len = ogs_fqdn_build(
                 apn, roaming_apn, strlen(roaming_apn));
-	
-	} else {
- /* simple quick fix so we alway send the apn in gprs fromat */
-    char fqdn_apn[OGS_MAX_APN_LEN+1] = "";
-
-    /* Use the first home PLMN configured in MME */
-    uint16_t home_mcc = mme_self()->home_mnc_mcc[0].mcc;
-    uint16_t home_mnc = mme_self()->home_mnc_mcc[0].mnc;
-
-    snprintf(
-        fqdn_apn,
-        sizeof(fqdn_apn),
-        "%s.mnc%03u.mcc%03u.gprs",
-        session->name,
-        home_mnc,
-        home_mcc
-    );
-
-    req->access_point_name.len = ogs_fqdn_build(apn, fqdn_apn, strlen(fqdn_apn));
-}
-
-
+    } else {
+        req->access_point_name.len = ogs_fqdn_build(
+                apn, session->name, strlen(session->name));
+    }
 
     req->access_point_name.data = apn;
 

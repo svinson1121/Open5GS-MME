@@ -239,7 +239,7 @@ static int mme_context_validation(void)
     }
 
     if (ogs_list_first(&self.sgw_roaming_list) == NULL) {
-        ogs_warn("No sgw_roaming.gtpc in '%s'", ogs_app()->file);
+        ogs_info("No sgw_roaming.gtpc in '%s'", ogs_app()->file);
     }
 
     if (ogs_list_first(&self.pgw_list) == NULL) {
