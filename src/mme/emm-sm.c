@@ -789,6 +789,14 @@ static void common_register_state(ogs_fsm_t *s, mme_event_t *e,
                 ogs_assert(OGS_OK ==
                     sgsap_send_uplink_unitdata(mme_ue, &message->emm.
                         uplink_nas_transport.nas_message_container));
+
+	  /*
+            } else if (SMS_IN_MME_ALLOWED) {
+                mme_sgd_send_ofr(mme_ue, &message->emm.uplink_nas_transport.
+                    nas_message_container);
+	  */
+
+
             } else {
                 S1AP_MME_UE_S1AP_ID_t MME_UE_S1AP_ID;
                 S1AP_ENB_UE_S1AP_ID_t ENB_UE_S1AP_ID;

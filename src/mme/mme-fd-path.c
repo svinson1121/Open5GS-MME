@@ -28,6 +28,8 @@ static struct disp_hdl *hdl_s6a_idr = NULL;
 
 static struct session_handler *mme_s6a_reg = NULL;
 
+/* static struct session_handler *mme_sgd_reg = NULL; */
+
 static struct session_handler *mme_s13_reg = NULL;
 
 /* s6a process Subscription-Data from avp */
@@ -44,6 +46,8 @@ static void mme_s6a_aia_cb(void *data, struct msg **msg);
 static void mme_s6a_ula_cb(void *data, struct msg **msg);
 static void mme_s13_eca_cb(void *data, struct msg **msg);
 static void mme_s6a_pua_cb(void *data, struct msg **msg);
+/* static void mme_sgd_ofa_cb(void *data, struct msg **msg); */
+
 static int push_pcscf_restoration_event(mme_ue_t *mme_ue);
 
 static void state_cleanup(struct sess_state *sess_data, os0_t sid, void *opaque)
@@ -2617,6 +2621,26 @@ static int push_pcscf_restoration_event(mme_ue_t *mme_ue)
 
     return rv;
 }
+
+
+
+/* MME Sends MO Forward Short Message Request to SMSC */
+/*
+void mme_sgd_send_ofr(mme_ue_t *mme_ue,
+    ogs_nas_eps_message_container_t *nas_message_container)
+{
+    ogs_debug("[MME] MO-Forward-Short-Message-Request");
+}
+*/
+
+/* MME received MO Forward Short Message Answer from SMSC */
+/*
+static void mme_sgd_ofa_cb(void *data, struct msg **msg)
+{
+    ogs_debug("[MME] MO-Forward-Short-Message-Answer");
+}
+
+*/
 
 int mme_fd_init(void)
 {
