@@ -1,0 +1,3 @@
+shlibs:Depends=libc6 (>= 2.38), libhiredis1.1.0 (>= 1.2.0), libtalloc2 (>= 2.0.4~git20101213), libyaml-0-2, open5gs-common
+misc:Depends=
+misc:Pre-Depends=

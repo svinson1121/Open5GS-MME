@@ -1,0 +1,14 @@
+Package: open5gs-mme-dbgsym
+Package-Type: ddeb
+Source: open5gs
+Version: 2.6.3
+Auto-Built-Package: debug-symbols
+Architecture: amd64
+Maintainer: Harald Welte <laforge@gnumonks.org>
+Installed-Size: 2041
+Depends: open5gs-mme (= 2.6.3)
+Section: debug
+Priority: optional
+Multi-Arch: same
+Description: debug symbols for open5gs-mme
+Build-Ids: 507be81a639460ec3a05083679b36874c32e4b99

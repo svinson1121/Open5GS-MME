@@ -1,0 +1,4 @@
+/etc/freeDiameter/mme.conf
+/etc/open5gs/mme.yaml
+/etc/open5gs/tls/mme.crt
+/etc/open5gs/tls/mme.key

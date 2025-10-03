@@ -1,0 +1,6 @@
+debian/tmp/usr/bin/open5gs-mmed
+obj-x86_64-linux-gnu/configs/freeDiameter/mme.conf
+obj-x86_64-linux-gnu/configs/open5gs/mme.yaml
+obj-x86_64-linux-gnu/configs/open5gs/tls/mme.key
+obj-x86_64-linux-gnu/configs/open5gs/tls/mme.crt
+obj-x86_64-linux-gnu/configs/systemd/open5gs-mmed.service

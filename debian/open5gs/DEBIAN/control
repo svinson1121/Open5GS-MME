@@ -1,0 +1,15 @@
+Package: open5gs
+Version: 2.6.3
+Architecture: amd64
+Maintainer: Harald Welte <laforge@gnumonks.org>
+Installed-Size: 12
+Depends: open5gs-common (= 2.6.3), open5gs-mme (= 2.6.3)
+Section: net
+Priority: optional
+Multi-Arch: same
+Homepage: https://open5gs.org
+Description: 5G Core and EPC (metapackage)
+ Open5GS is a C-language implementation of 5G Core and EPC
+ Packet Core, i.e. the core network of an NR/LTE network (Release-17)
+ .
+ This is a metapackage that depends on all the open5gs parts.

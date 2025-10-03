@@ -1,0 +1,17 @@
+Package: open5gs-common
+Source: open5gs
+Version: 2.6.3
+Architecture: amd64
+Maintainer: Harald Welte <laforge@gnumonks.org>
+Installed-Size: 16945
+Depends: libbson-1.0-0t64 (>= 1.30.2), libc6 (>= 2.38), libcurl3t64-gnutls (>= 7.16.3), libgnutls30t64 (>= 3.8.1), libhiredis1.1.0 (>= 1.2.0), libidn12 (>= 1.13), libmicrohttpd12t64 (>= 0.9.61), libmongoc-1.0-0t64 (>= 1.30.2), libnghttp2-14 (>= 1.14.0), libsctp1 (>= 1.0.12+dfsg), libssl3t64 (>= 3.0.0), libtalloc2 (>= 2.0.4~git20101213), libyaml-0-2
+Section: net
+Priority: optional
+Multi-Arch: same
+Homepage: https://open5gs.org
+Description: 5G Core and EPC (Shared Files)
+ Open5GS is a C-language implementation of 5G Core and EPC
+ Packet Core, i.e. the core network of an NR/LTE network (Release-17)
+ .
+ This package contains some core libraries/plugins required by the other
+ binary packages such as open5gs-{mme,sgwc,sgwu,amf,smf,upf,...}.

@@ -1,0 +1,2 @@
+/etc/logrotate.d/open5gs
+/etc/open5gs/tls/ca.crt

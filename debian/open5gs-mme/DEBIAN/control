@@ -1,0 +1,19 @@
+Package: open5gs-mme
+Source: open5gs
+Version: 2.6.3
+Architecture: amd64
+Maintainer: Harald Welte <laforge@gnumonks.org>
+Installed-Size: 602
+Depends: libc6 (>= 2.38), libhiredis1.1.0 (>= 1.2.0), libtalloc2 (>= 2.0.4~git20101213), libyaml-0-2, open5gs-common (= 2.6.3)
+Section: net
+Priority: optional
+Multi-Arch: same
+Homepage: https://open5gs.org
+Description: MME (Mobility Management Entity)
+ Open5GS is a C-language implementation of 5G Core and EPC
+ Packet Core, i.e. the core network of an NR/LTE network (Release-17)
+ .
+ This package provides the MME (Mobility Management Engine), which
+ terminates the S1 interfaces from the eNodeBs cells in the cellular
+ network, and interfaces via S11 to the SGW-C as well as via S6a to the
+ HSS.

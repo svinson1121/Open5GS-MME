@@ -1,0 +1,4 @@
+faed49608b440a62f9fc4592189e07e1  lib/systemd/system/open5gs-mmed.service
+443f708fe06b955db4e03ab34a98e30a  usr/bin/open5gs-mmed
+fedb145a7f16415b8906d75f21b30f9e  usr/share/doc/open5gs-mme/changelog.gz
+95e021b526f2ff094acab2366cd33f46  usr/share/doc/open5gs-mme/copyright

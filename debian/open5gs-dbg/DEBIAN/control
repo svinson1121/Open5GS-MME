@@ -1,0 +1,16 @@
+Package: open5gs-dbg
+Source: open5gs
+Version: 2.6.3
+Architecture: amd64
+Maintainer: Harald Welte <laforge@gnumonks.org>
+Installed-Size: 12
+Depends: open5gs (= 2.6.3)
+Section: net
+Priority: optional
+Multi-Arch: same
+Homepage: https://open5gs.org
+Description: Debug symbols for Open5GS
+ Open5GS is a C-language implementation of 5G Core and EPC
+ Packet Core, i.e. the core network of an NR/LTE network (Release-17)
+ .
+ This package contains debug symbols for Open5GS.

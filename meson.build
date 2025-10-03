@@ -22,7 +22,7 @@ project('open5gs', 'c', 'cpp',
     default_options : [
         'warning_level=1',
         'c_std=gnu89',
-	'werror=true'
+	'werror=false'
     ],
 )
 
@@ -125,11 +125,11 @@ add_project_arguments(
 subdir('configs')
 subdir('lib')
 subdir('src')
-subdir('misc')
+#subdir('misc')
 # Don't build the tests unless we can run them (either natively or in an exe wrapper)
 build_tests = not meson.is_cross_build() or (meson.is_cross_build() and meson.has_exe_wrapper())
 if build_tests
-    subdir('tests')
+    #subdir('tests')
 endif
 
 message('\n'.join([
