@@ -27,7 +27,8 @@ libdnsresolvers_sources = files('''
 
 libdnsresolvers_inc = include_directories('.')
 
-libresolv_dep = cc.find_library('libresolv')
+#libresolv_dep = cc.find_library('libresolv')
+libresolv_dep = cc.find_library('resolv', required : false)
 
 libdnsresolvers = static_library('dns_resolvers',
     sources : libdnsresolvers_sources,
